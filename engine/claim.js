@@ -94,8 +94,17 @@
       return (!isNum(it.amount) || it.amount_confirmed === false) ? '*' : '';
     }
 
+    // A percent-premium line (amount_type 'percent_premium') shows "CODE +X% (= $Y)" -- the
+    // percent OF the base fee(s), never a flat dollar. it.amount already holds the computed $Y.
+    function isPct(it) { return it && it.amount_type === 'percent_premium' && typeof it.percent === 'number'; }
+    function codeDisp(it) {
+      return isPct(it)
+        ? it.code + ' +' + it.percent + '% (= ' + moneyDisp(it.amount) + ')' + star(it)
+        : it.code + ' ' + moneyDisp(it.amount) + star(it);
+    }
+
     // ---- text: one copy-paste claim line ----
-    var codeSeq = items.map(function (it) { return it.code + ' ' + moneyDisp(it.amount) + star(it); });
+    var codeSeq = items.map(function (it) { return codeDisp(it); });
     var text =
       'Claim ' + date + '  |  OHIP# ' + orDash(ohip) + '  |  Group ' + orDash(group) + '\n' +
       (codeSeq.length ? codeSeq.join(' + ') + '  =  $' + total.toFixed(2) : '(no codes)') +
@@ -113,7 +122,9 @@
 
     // ---- epicCard: terse Epic Charge Capture cheat card ----
     var epicLines = items.map(function (it) {
-      return '  ' + it.code + '  ' + it.label + '  ' + moneyDisp(it.amount) + star(it);
+      var amt = isPct(it) ? '+' + it.percent + '% (= ' + moneyDisp(it.amount) + ')' + star(it)
+                          : moneyDisp(it.amount) + star(it);
+      return '  ' + it.code + '  ' + it.label + '  ' + amt;
     });
     var epicCard =
       'Enter in Epic Charge Capture (' + date + '):\n' +

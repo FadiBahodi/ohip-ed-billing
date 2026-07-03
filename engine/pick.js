@@ -53,6 +53,9 @@
     return (amount === null || amount === undefined) ? '$?' : '$' + Number(amount).toFixed(2);
   }
 
+  // 2-dp rounding used for percent-premium dollar values (base x percent / 100).
+  function round2(x) { return Math.round((Number(x) + Number.EPSILON) * 100) / 100; }
+
   // assessment_map is [{prefix,time_band,complexity,code}]. A/G entries use time_band "any".
   function findAssessmentEntry(rules, prefix, complexity, time_band) {
     for (var i = 0; i < rules.assessment_map.length; i++) {
@@ -169,20 +172,90 @@
 
     // ---- 3) PROCEDURES (stack on top of the assessment) ----
     var procedures = [];
+    var warnings = [];
     var reqProcs = facts.procedures || [];
+
+    // 3a) Resolve each requested code to its KB object (or a synthetic 'unknown' line).
+    var resolved = [];
     for (var p = 0; p < reqProcs.length; p++) {
       var pc = reqProcs[p];
       if (byCode[pc]) {
-        procedures.push(byCode[pc]);
+        resolved.push(byCode[pc]);
         cite(byCode[pc].source_url);
       } else {
-        procedures.push({
+        resolved.push({
           code: pc, label: 'UNKNOWN CODE (not in KB)', prefix: (pc && pc[0]) || '',
           category: 'procedure', amount: null, amount_confirmed: false, source_url: null
         });
         reasoning.push('Procedure ' + pc + ' not found in KB; emitted as-is, verify against SOB.');
       }
     }
+
+    // 3b) FIX: ONE REDUCTION PER ANATOMICAL SITE.
+    // Reduction codes (F-prefix fracture reduction, D-prefix dislocation reduction) are mutually
+    // exclusive per joint -- a fracture-dislocation is ONE reduction, not two. If more than one
+    // reduction is selected for the SAME site, keep the first and WARN; never silently sum both.
+    // The site map lives in rules.reduction_mutual_exclusion.sites (single source of truth).
+    var redRule = rules.reduction_mutual_exclusion || {};
+    var redSites = redRule.sites || {};
+    function reductionSite(c) {
+      if (!c) return null;
+      var pre = c.prefix || (c.code && c.code[0]);
+      if (pre !== 'F' && pre !== 'D') return null;
+      if (c.category !== 'procedure') return null;
+      if (redSites[c.code]) return redSites[c.code];                 // mapped site (authoritative)
+      var lab = (c.label || '').toLowerCase();                       // unmapped F/D reduction:
+      if (/reduction/.test(lab) && !/no reduction/.test(lab)) return 'site:' + c.code; // unique -> never collides
+      return null;                                                   // not a reduction (e.g. D014 'no reduction')
+    }
+    function humanSite(site) { return (site.indexOf('site:') === 0) ? 'the same site' : 'the ' + site; }
+
+    var seenSite = {};   // site -> first reduction code already kept for that site
+    resolved.forEach(function (c) {
+      var site = reductionSite(c);
+      if (site && seenSite[site]) {
+        var kept = seenSite[site];
+        var msg = 'One reduction per site: pick ' + kept + ' OR ' + c.code + ' for ' + humanSite(site) +
+          ', not both (a fracture-dislocation is one reduction). Kept ' + kept + ', excluded ' +
+          c.code + ' from the total.';
+        warnings.push(msg);
+        reasoning.push(msg);
+        return; // drop the duplicate reduction -- it must not reach the claim/total
+      }
+      if (site) seenSite[site] = c.code;
+      procedures.push(c);
+    });
+
+    // 3c) FIX: PERCENT-PREMIUM codes bill as a PERCENT of the base fee(s), NOT flat dollars.
+    // A code with amount_type 'percent_premium' carries a PERCENT in `amount` (e.g. 50 => +50%).
+    // Base = the other (non-percent) procedural fees stacked in this claim. Compute the dollar
+    // value = base x percent/100 and carry it as a computed line. Never add the raw percent as $.
+    var pctBase = 0;
+    procedures.forEach(function (c) {
+      if (c.amount_type !== 'percent_premium' && typeof c.amount === 'number' && isFinite(c.amount)) {
+        pctBase += c.amount;
+      }
+    });
+    pctBase = round2(pctBase);
+
+    procedures = procedures.map(function (c) {
+      if (c.amount_type !== 'percent_premium') return c;
+      var pct = (typeof c.amount === 'number') ? c.amount : null;
+      var computed = (pct === null) ? null : round2(pctBase * pct / 100);
+      var clone = {};
+      for (var k in c) if (Object.prototype.hasOwnProperty.call(c, k)) clone[k] = c[k];
+      clone.percent = pct;                 // premium percent (e.g. 50)
+      clone.base_amount = pctBase;         // base the percent was applied to
+      clone.computed_amount = computed;    // dollar value of the premium
+      clone.amount = computed;             // amount is now the $ value -> all summation logic Just Works
+      clone.percent_display = c.code + '  +' + pct + '% of base ' + money(pctBase) + '  (= ' + money(computed) + ')';
+      reasoning.push(c.code + ' percent premium: +' + pct + '% of the base procedural fee(s) ' +
+        money(pctBase) + ' = ' + money(computed) + '.' +
+        (pctBase === 0 ? ' No eligible base procedure selected yet -- add the procedure it modifies.'
+                       : ' Confirm the eligible base against the SOB (some premiums exclude diagnostics/other premiums).'));
+      return clone;
+    });
+
     if (procedures.length) {
       reasoning.push('Procedures stack on the assessment: ' +
         procedures.map(function (x) { return x.code; }).join(', ') + '.');
@@ -196,7 +269,10 @@
     var parts = lineItems.map(function (it) {
       if (it.amount === null || it.amount === undefined) anyUnconfirmed = true;
       else total += Number(it.amount);
-      return it.code + ' ' + money(it.amount) + (it.amount_confirmed === false ? '*' : '');
+      var star = (it.amount_confirmed === false ? '*' : '');
+      // percent premiums render as "CODE +X% of base $B (= $Y)", not a flat dollar line.
+      if (it.amount_type === 'percent_premium' && it.percent_display) return it.percent_display + star;
+      return it.code + ' ' + money(it.amount) + star;
     });
     var claim_line = parts.join(' + ');
     if (parts.length) claim_line += ' = $' + total.toFixed(2);
@@ -209,6 +285,7 @@
       claim_line: claim_line,
       reasoning: reasoning,
       citations: citations,
+      warnings: warnings,
       total: Number(total.toFixed(2)),
       has_unconfirmed: anyUnconfirmed
     };

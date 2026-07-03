@@ -39,7 +39,7 @@ async function textOf(page, sel) {
 
 (async () => {
   const errors = [];
-  const res = { passed: false, chips_ok: false, freetext_ok: false, copy_ok: false, export_ok: false, url: URL, errors };
+  const res = { passed: false, chips_ok: false, freetext_ok: false, copy_ok: false, export_ok: false, reduction_ok: false, percent_ok: false, url: URL, errors };
   let browser;
   try {
     browser = await puppeteer.launch({

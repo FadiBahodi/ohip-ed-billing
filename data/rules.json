@@ -241,10 +241,37 @@
   "svp_rule_detail": "Special Visit Premiums require an A-prefix assessment code (A001/A007/A003). They CANNOT be billed with H-prefix ED assessment codes (H101-H154). The premium code itself is K-prefix when not on-call, or H9xx-prefix when on-call. After the max number of premiums per period is reached, revert to H-prefix assessment codes. (DoctorCare ON ER Special Premiums QRG, Feb 2026)",
   "procedure_stacking": "procedures bill on top of the assessment",
   "one_assessment_per_patient": true,
+  "reduction_mutual_exclusion": {
+    "note": "ONE REDUCTION PER ANATOMICAL SITE. Reduction codes (F-prefix fracture reduction, D-prefix dislocation reduction) are mutually exclusive for the same joint/bone: a fracture-dislocation is ONE reduction, so bill the fracture F-code OR the dislocation D-code for that site, never both. Reductions at DIFFERENT joints (e.g. an ankle reduction AND a shoulder reduction) each bill normally. The engine keeps the first reduction selected for a site and warns on any further reduction at that same site rather than summing them. D014 (AC/SC joint injury 'no reduction') is not a reduction code.",
+    "rule": "F/D reduction codes do not stack per site",
+    "sites": {
+      "F005": "finger", "F007": "finger", "D001": "finger",
+      "F009": "hand",
+      "F013": "thumb",
+      "F032": "forearm",
+      "F028": "wrist", "F046": "wrist",
+      "F035": "elbow", "D009": "elbow", "D012": "elbow",
+      "F043": "humerus",
+      "F054": "shoulder", "D015": "shoulder", "D016": "shoulder",
+      "F075": "ankle", "D035": "ankle",
+      "F079": "tibia",
+      "F071": "calcaneus",
+      "F063": "metatarsal",
+      "F058": "toe",
+      "F136": "nose",
+      "D042": "hip",
+      "D038": "knee",
+      "D031": "patella",
+      "D030": "toe-mtp"
+    }
+  },
+  "percent_premium_rule": "Codes with amount_type 'percent_premium' (E420 +50% trauma, E400 +50% / E401 +75% procedural-sedation after-hours, E412 +20% / E413 +40% ED procedure after-hours) carry a PERCENT in their amount field, NOT a flat dollar. The engine computes them as that percent of the base procedural fee(s) stacked in the claim and renders a separate '+X% (= $Y)' line. Never add the raw percent as dollars. E400/E401 require the anaesthesia/sedation suffix (E400C/E401C) to be billable.",
   "fee_notes": [
     "H-prefix ED assessment codes received a 4.33% increase effective 2025-04-01 (OHIP Bulletin 260102, 2024 PSA). Amounts here are the pre-increase schedule values -> treat as a FLOOR; confirm exact current $ against the live SOB before submission.",
     "Amounts marked amount_confirmed:false have a sourced CODE but no confirmed $ on the fetched sheets (mostly fracture F-codes, dislocation D-codes, and procedures the sheets list without a price). Confirm $ against the SOB.",
-    "Re-assessments limited to 2/patient/physician/day; not payable for discharge, admission by the ED MD, or when they lead to a consult referral."
+    "Re-assessments limited to 2/patient/physician/day; not payable for discharge, admission by the ED MD, or when they lead to a consult referral.",
+    "One reduction per anatomical site: F-prefix fracture-reduction and D-prefix dislocation-reduction codes do NOT stack for the same joint/bone (a fracture-dislocation is one reduction). See reduction_mutual_exclusion.",
+    "Percent-premium codes (amount_type 'percent_premium': E420/E400/E401/E412/E413) are a PERCENT of the base procedural fee(s), not a flat dollar. See percent_premium_rule."
   ],
   "sources": {
     "EMLONDON": "https://emlondon.ca/emergency-ohip-fee-codes/",

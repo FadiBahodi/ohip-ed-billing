@@ -297,7 +297,7 @@ function pickLocal(facts) {
   if (parts.length) claim_line += " = $" + total.toFixed(2);
   reasoning.push("Local fallback (engine/pick.js did not load). Codes shown are from the KB; verify $ vs the live SOB.");
   const citations = [...new Set(items.map((c) => c.source_url).filter(Boolean))];
-  return { assessment, premiums, procedures, claim_line, reasoning, citations, total: Number(total.toFixed(2)), has_unconfirmed: unc };
+  return { assessment, premiums, procedures, claim_line, reasoning, citations, warnings: [], total: Number(total.toFixed(2)), has_unconfirmed: unc };
 }
 
 // ---- render: the answer as the hero ----
@@ -332,10 +332,25 @@ function render(result, engine) {
     const t = document.createElement("span"); t.className = "li-tag"; t.textContent = tag;
     lab.appendChild(t);
     const amt = document.createElement("span"); amt.className = "li-amt" + (isUnconfirmed(it) ? " unconfirmed" : "");
-    amt.textContent = money(it.amount) + (isUnconfirmed(it) ? "*" : "");
+    if (it.amount_type === "percent_premium" && typeof it.percent === "number") {
+      // percent premium: show "+X% = $Y" (a percent of the base fee, not a flat dollar).
+      amt.classList.add("percent");
+      amt.textContent = "+" + it.percent + "% = " + money(it.amount);
+    } else {
+      amt.textContent = money(it.amount) + (isUnconfirmed(it) ? "*" : "");
+    }
     li.appendChild(code); li.appendChild(lab); li.appendChild(amt);
     ul.appendChild(li);
   }
+
+  // warnings (e.g. one reduction per site) — shown prominently inside the answer.
+  const wEl = $("hero-warnings");
+  const warns = result.warnings || [];
+  wEl.innerHTML = "";
+  if (warns.length) {
+    wEl.hidden = false;
+    warns.forEach((w) => { const li = document.createElement("li"); li.textContent = w; wEl.appendChild(li); });
+  } else { wEl.hidden = true; }
 
   // unconfirmed flag
   const uEl = $("hero-unconfirmed");
