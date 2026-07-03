@@ -33,6 +33,87 @@ function setStored(key, val) {
   try { if (val) localStorage.setItem(key, val); else localStorage.removeItem(key); } catch (e) { /* private mode */ }
 }
 
+// ---- bridge discovery + effective URL ----
+// The bridge publishes its CURRENT tunnel URL to bridge.json at the site root (same-origin as this
+// app). We fetch it so the user never has to paste a URL — only a token. A manual URL (Settings
+// override) always wins over the discovered one. discoveredBridgeUrl is cached in memory and
+// re-fetched right before each bridge call so a just-restarted bridge (new tunnel URL) is picked up.
+const DISCOVERY_PATH = "bridge.json"; // relative, same-origin (served next to index.html)
+const DISCOVERY_TIMEOUT_MS = 5000;
+const PING_TIMEOUT_MS = 4000;
+let discoveredBridgeUrl = "";
+let bridgeStatusTimer = null;
+
+async function fetchDiscovery() {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), DISCOVERY_TIMEOUT_MS);
+  try {
+    const r = await fetch(DISCOVERY_PATH + "?t=" + Date.now(), { cache: "no-store", signal: ctrl.signal });
+    if (r.ok) {
+      const j = await r.json().catch(() => null);
+      const u = (j && typeof j.url === "string") ? j.url.trim().replace(/\/+$/, "") : "";
+      discoveredBridgeUrl = u; // may legitimately clear if the file goes empty
+    }
+    // non-200 (e.g. no bridge.json deployed): keep whatever we had — the local engine still works.
+  } catch (e) {
+    /* offline / no discovery file — leave discoveredBridgeUrl as-is */
+  } finally {
+    clearTimeout(timer);
+  }
+  return discoveredBridgeUrl;
+}
+
+// The URL "Read the case" actually uses: a manual Settings override if present, else the discovered one.
+function effectiveBridgeUrl() {
+  const manual = getBridgeUrl().trim().replace(/\/+$/, "");
+  return manual || discoveredBridgeUrl;
+}
+
+// REAL connection status: pings the bridge's GET / and reports the TRUTH (not "boxes filled").
+//   GREEN  — ping returns ok:true AND a token is set.
+//   AMBER  — bridge is reachable but no token yet.
+//   GREY   — no URL, or the ping fails/times out (bridge not reachable).
+async function bridgeStatus() {
+  const wrap = $("bridge-status"), txt = $("bridge-status-text");
+  if (!wrap || !txt) return;
+  const setState = (cls, message) => {
+    wrap.classList.remove("on", "amber");
+    if (cls) wrap.classList.add(cls);
+    txt.textContent = message;
+  };
+
+  const url = effectiveBridgeUrl();
+  const token = getBridgeToken();
+  if (!url) { setState("", "Local engine — bridge not reachable (is your Mac on?)"); return; }
+
+  setState("", "Checking your bridge…"); // neutral while we actually reach out
+
+  let reachable = false;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), PING_TIMEOUT_MS);
+  try {
+    const r = await fetch(url + "/", { cache: "no-store", signal: ctrl.signal });
+    if (r.ok) {
+      const j = await r.json().catch(() => null);
+      reachable = !!(j && j.ok === true);
+    }
+  } catch (e) {
+    reachable = false;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!reachable) { setState("", "Local engine — bridge not reachable (is your Mac on?)"); return; }
+  if (!token)     { setState("amber", "Bridge found, add your token"); return; }
+  setState("on", "Connected — Read the case uses your Claude");
+}
+
+// Debounced status refresh for keystrokes in the token/URL fields (~500ms).
+function scheduleBridgeStatus() {
+  clearTimeout(bridgeStatusTimer);
+  bridgeStatusTimer = setTimeout(() => { bridgeStatus(); }, 500);
+}
+
 const state = {
   rules: null, codes: null, byCode: {},
   pickFn: null, parseFn: null, buildClaim: null,
@@ -68,6 +149,10 @@ async function init() {
   wireSettings();
   refreshControls();
   compute();
+
+  // DISCOVERY: learn the bridge URL published at the site root, THEN show the real status.
+  // Non-blocking: everything above already rendered; status resolves once the ping returns.
+  fetchDiscovery().then(bridgeStatus);
 }
 
 // ---- loaders ----
@@ -209,25 +294,15 @@ function wireSettings() {
       : "Until set, the claim header shows “OHIP# —”.";
   };
 
-  // Live status for the prominent "Use your Claude" card: GREEN "Connected" when BOTH the bridge
-  // URL and token are set, else GREY "Local engine". Updates on every keystroke and on init.
-  const bridgeStatus = () => {
-    const wrap = $("bridge-status"), txt = $("bridge-status-text");
-    if (!wrap || !txt) return;
-    const connected = !!(getBridgeUrl() && getBridgeToken());
-    wrap.classList.toggle("on", connected); // .on drives the green dot + text via CSS
-    txt.textContent = connected
-      ? "Connected — Read the case uses your Claude"
-      : "Local engine — paste your bridge URL + token above to use your Claude";
-  };
-
+  // The prominent "Use your Claude" card's status is driven by the module-level bridgeStatus(),
+  // which actually PINGS the bridge (see above). Keystrokes here debounce a real re-ping (~500ms).
   ohipIn.addEventListener("input", () => { setStored(OHIP_KEY, ohipIn.value.trim()); refresh(); compute(); });
   groupIn.addEventListener("input", () => { setStored(GROUP_KEY, groupIn.value.trim()); refresh(); compute(); });
   if (urlIn) urlIn.addEventListener("input", () => {
-    // Trim any trailing slash(es); the bridge path (/bill) is appended at call time.
-    setStored(BRIDGE_URL_KEY, urlIn.value.trim().replace(/\/+$/, "")); bridgeStatus();
+    // Trim any trailing slash(es); the bridge path (/bill) is appended at call time. Blank = auto-detect.
+    setStored(BRIDGE_URL_KEY, urlIn.value.trim().replace(/\/+$/, "")); scheduleBridgeStatus();
   });
-  if (tokIn) tokIn.addEventListener("input", () => { setStored(BRIDGE_TOKEN_KEY, tokIn.value.trim()); bridgeStatus(); });
+  if (tokIn) tokIn.addEventListener("input", () => { setStored(BRIDGE_TOKEN_KEY, tokIn.value.trim()); scheduleBridgeStatus(); });
   clearBtn.addEventListener("click", () => {
     setStored(OHIP_KEY, ""); setStored(GROUP_KEY, "");
     setStored(BRIDGE_URL_KEY, ""); setStored(BRIDGE_TOKEN_KEY, "");
@@ -238,7 +313,7 @@ function wireSettings() {
   });
 
   refresh();
-  bridgeStatus();
+  // Initial status paint is driven from init() after discovery resolves.
 }
 
 // ---- (a) free text -> parse -> chips + pick() ----
@@ -250,8 +325,9 @@ function wireFreeText() {
   });
 }
 
-// Router: bridge (the user's own Claude) when a bridge URL is set, else the local parser.
-// Falls back to the local engine on any bridge error/timeout/non-200.
+// Router: bridge (the user's own Claude) when we HAVE a URL (discovered or manual override) AND a
+// token, else the local parser. Re-fetches discovery first so a just-restarted bridge (new tunnel
+// URL) is picked up. Falls back to the local engine on any bridge error/timeout/non-200.
 async function readCase() {
   if (state.loading) return; // guard against double-submit (button disabled + Cmd+Enter)
   const text = $("case-text").value.trim();
@@ -259,8 +335,9 @@ async function readCase() {
   hint.classList.remove("err");
   if (!text) { hint.textContent = "Type the case first, or set the chips."; hint.classList.add("err"); return; }
 
-  const url = getBridgeUrl(), token = getBridgeToken();
-  if (url) {
+  await fetchDiscovery(); // pick up a fresh tunnel URL before routing
+  const url = effectiveBridgeUrl(), token = getBridgeToken();
+  if (url && token) {
     setLoading(true);
     setBadge("asking your Claude…", "info");
     hint.textContent = "Asking your Claude…";
@@ -273,10 +350,12 @@ async function readCase() {
       readCaseLocal(text, hint, true);
     } finally {
       setLoading(false);
+      bridgeStatus(); // reflect real reachability after the call
     }
     return;
   }
   readCaseLocal(text, hint, false);
+  bridgeStatus();
 }
 
 // Deterministic local path: parse(text) -> facts -> chips + pick(). Always available, always FREE.

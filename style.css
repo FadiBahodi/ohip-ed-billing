@@ -535,6 +535,27 @@ body {
   background: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
+/* AMBER: bridge is reachable but the user hasn't pasted a token yet. */
+.connect-status.amber { color: var(--ink-soft); }
+.connect-status.amber .status-dot {
+  background: var(--warn);
+  box-shadow: 0 0 0 3px var(--warn-soft);
+}
+
+/* connect card fields: TOKEN is primary (top, full width); URL is a secondary auto-detected override. */
+.connect-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.connect-url .field-label { color: var(--muted); font-weight: 500; }
+.connect-hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
 
 /* ---- assistant bridge: the clarifying question, shown prominently on the dark hero ---- */
 .bridge-ask {

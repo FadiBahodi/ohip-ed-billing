@@ -23,23 +23,24 @@
          used only to POST the case to the user's own `claude -p` bridge. Blank = local engine. -->
     <section class="panel connect" aria-label="Connect your Claude">
       <h2 class="connect-title">Use your Claude</h2>
-      <p class="connect-lede">Free, via your Mac. Paste the URL + token from your bridge; then Read the
-        case reasons with your Claude. Leave blank to use the local engine.</p>
-      <div class="settings-grid">
-        <label class="settings-field">
-          <span class="field-label">Assistant bridge URL</span>
-          <input id="set-bridge-url" class="search" type="url"
-            autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…trycloudflare.com" />
-        </label>
-        <label class="settings-field">
+      <p class="connect-lede">Free, via your Mac. Paste your bridge TOKEN once — the URL is found
+        automatically. Leave blank to use the local engine.</p>
+      <div class="connect-fields">
+        <label class="settings-field connect-token">
           <span class="field-label">Bridge token</span>
           <input id="set-bridge-token" class="search" type="text"
             autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste the token" />
         </label>
+        <label class="settings-field connect-url">
+          <span class="field-label">Assistant bridge URL (auto-detected — leave blank)</span>
+          <input id="set-bridge-url" class="search" type="url"
+            autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="auto-detected — optional override" />
+        </label>
       </div>
+      <p class="connect-hint">The URL is detected automatically from your Mac's bridge. Only fill it in to override.</p>
       <div class="connect-status" id="bridge-status" role="status" aria-live="polite">
         <span class="status-dot" id="bridge-status-dot"></span>
-        <span class="status-text" id="bridge-status-text">Local engine — paste your bridge URL + token above to use your Claude</span>
+        <span class="status-text" id="bridge-status-text">Checking for your bridge…</span>
       </div>
     </section>
 
