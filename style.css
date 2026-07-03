@@ -574,3 +574,136 @@ body {
   font-weight: 700;
   color: var(--hero-code);
 }
+
+/* ---- outline / mini buttons (secondary actions on the light panels) ---- */
+.btn.outline {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--accent);
+}
+.btn.outline:hover { background: var(--accent-soft); border-color: var(--accent); filter: none; }
+.btn.outline:focus-visible { outline-color: var(--accent); }
+.btn.outline:disabled { opacity: 0.45; cursor: default; background: transparent; border-color: var(--line); }
+.btn.mini {
+  min-height: 34px;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* ---- spinner (queue: running) ---- */
+.spinner {
+  width: 13px; height: 13px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- queue panel ---- */
+.queue-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.queue-title {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.queue-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.queue-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+
+.q-item {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 11px 12px;
+  background: var(--bg);
+  animation: rowin 0.2s var(--ease) both;
+}
+.q-item.q-done { border-color: var(--accent); background: var(--accent-soft); }
+.q-item.q-error { border-color: var(--warn); background: var(--warn-soft); }
+
+.q-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.q-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.q-done .q-status { color: var(--accent); }
+.q-error .q-status { color: var(--warn); }
+
+.q-x {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: background 0.14s var(--ease), color 0.14s var(--ease);
+}
+.q-x:hover { background: rgba(0,0,0,0.06); color: var(--ink); }
+.q-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.q-case {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+
+.q-done { margin-top: 9px; }
+.q-done-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.q-codes {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--accent);
+  word-break: break-word;
+  min-width: 0;
+}
+.q-copy { flex: 0 0 auto; }
+
+.q-note { margin: 8px 0 0; font-size: 13.5px; color: var(--ink); }
+.q-why  { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+.q-ask  {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--accent);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+}
+.q-ask::before { content: "Needs a detail: "; font-weight: 700; color: var(--accent); }
+
+.q-err { margin: 6px 0 9px; font-size: 13px; color: var(--warn); line-height: 1.45; }

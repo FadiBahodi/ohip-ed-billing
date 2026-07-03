@@ -24,6 +24,12 @@ const OHIP_KEY = "billing_ohip", GROUP_KEY = "billing_group";
 const BRIDGE_URL_KEY = "billing_bridge_url", BRIDGE_TOKEN_KEY = "billing_bridge_token";
 const BRIDGE_TIMEOUT_MS = 130000; // ~130s: claude -p can take a while; longer than the bridge's own 120s.
 
+// QUEUE: fire off many cases without waiting; codes fill in as each finishes. Persisted here so a
+// refresh/close never loses a case. Worker keeps at most QUEUE_CONCURRENCY bridge POSTs in flight.
+const QUEUE_KEY = "billing_queue";
+const QUEUE_CONCURRENCY = 3;
+const QUEUE_RETRY_MS = 15000; // when the bridge is unreachable, re-try pending items ~every 15s.
+
 function lsGet(key)  { try { return localStorage.getItem(key) || ""; } catch (e) { return ""; } }
 function getOhip()   { return lsGet(OHIP_KEY); }
 function getGroup()  { return lsGet(GROUP_KEY); }
@@ -106,6 +112,8 @@ async function bridgeStatus() {
   if (!reachable) { setState("", "Local engine — bridge not reachable (is your Mac on?)"); return; }
   if (!token)     { setState("amber", "Bridge found, add your token"); return; }
   setState("on", "Connected — Read the case uses your Claude");
+  // Bridge just went green — kick the queue so any pending cases process now, not in 15s.
+  try { pumpQueue(); } catch (e) { /* worker is best-effort */ }
 }
 
 // Debounced status refresh for keystrokes in the token/URL fields (~500ms).
@@ -120,7 +128,12 @@ const state = {
   facts: { time_band: "day", complexity: "comprehensive", procedures: [], special_visit: false },
   procQuery: "",
   lastResult: null, lastClaim: null, loading: false,
+  queue: [],
 };
+
+// Queue worker state (module-level so concurrency + retry survive re-renders).
+let queueInFlight = 0;   // number of bridge POSTs currently open (<= QUEUE_CONCURRENCY)
+let queueRetryTimer = null; // single interval that re-pumps pending items while the bridge is down
 
 const $ = (id) => document.getElementById(id);
 
@@ -132,27 +145,44 @@ init().catch((err) => {
 });
 
 async function init() {
-  state.rules = await fetchFirst(RULES_PATHS);
-  state.codes = await fetchFirst(CODES_PATHS);
-  state.byCode = index(state.codes);
-
-  const eng = await loadUmd(ENGINE_PATHS, "BillingEngine");
-  const par = await loadUmd(PARSE_PATHS, "BillingParse");
-  const cla = await loadUmd(CLAIM_PATHS, "BillingClaim");
-  state.pickFn    = eng && typeof eng.pick === "function" ? eng.pick : null;
-  state.parseFn   = par && typeof par.parse === "function" ? par.parse : null;
-  state.buildClaim = cla && typeof cla.buildClaim === "function" ? cla.buildClaim : null;
-
-  wireSearch();
+  // Wire the bridge/queue path FIRST so it works even if the local KB (data/, engine/) fails to
+  // load — the queue depends only on the user's bridge, never on the deterministic engine.
   wireFreeText();
   wireExport();
   wireSettings();
-  refreshControls();
-  compute();
+  wireQueue();
+  state.queue = loadQueue();
+  renderQueue();
 
-  // DISCOVERY: learn the bridge URL published at the site root, THEN show the real status.
-  // Non-blocking: everything above already rendered; status resolves once the ping returns.
-  fetchDiscovery().then(bridgeStatus);
+  // Local deterministic engine (chips + free-text fallback). Degrades gracefully if the code base
+  // isn't reachable (e.g. app/ served without its sibling data/ + engine/).
+  try {
+    state.rules = await fetchFirst(RULES_PATHS);
+    state.codes = await fetchFirst(CODES_PATHS);
+    state.byCode = index(state.codes);
+
+    const eng = await loadUmd(ENGINE_PATHS, "BillingEngine");
+    const par = await loadUmd(PARSE_PATHS, "BillingParse");
+    const cla = await loadUmd(CLAIM_PATHS, "BillingClaim");
+    state.pickFn    = eng && typeof eng.pick === "function" ? eng.pick : null;
+    state.parseFn   = par && typeof par.parse === "function" ? par.parse : null;
+    state.buildClaim = cla && typeof cla.buildClaim === "function" ? cla.buildClaim : null;
+
+    wireSearch();
+    refreshControls();
+    compute();
+  } catch (err) {
+    console.warn("local code base not loaded — bridge + queue still work:", err);
+    setBadge("bridge only", "info");
+    $("hero-label").textContent = "Local code base not loaded. Use your Claude (the bridge), or serve from the billing/ root.";
+  }
+
+  // DISCOVERY: learn the bridge URL published at the site root, THEN show the real status and
+  // resume any pending queue items. Non-blocking; guarded so a late failure can't crash the page.
+  fetchDiscovery().finally(() => {
+    try { bridgeStatus(); } catch (e) { /* status is best-effort */ }
+    try { pumpQueue(); } catch (e) { /* worker is best-effort */ }
+  });
 }
 
 // ---- loaders ----
@@ -576,91 +606,316 @@ function tagFor(a) {
 }
 
 // ---- render: the assistant bridge answer (the user's own Claude) into the same hero card ----
-// Bridge shape: {assessment:{code,label,amount}, premiums:[{code,label,detail}],
-//                procedures:[{code,label,amount}], claim_line, warnings[], total, reasoning[], ask}
-// Defensive against missing/oddly-typed fields since this is model output.
+// NEW terse bridge shape — CODES ONLY, no fees: {codes:["H103","F075"], note, why, ask}.
+// The user bills by writing the CODE onto Epic; he wants the code, not money — so NO fee/total on
+// the bridge path. codes = big + monospace + copyable; note = the primary line (the Epic sheet
+// line); why = small; ask = prominent only when non-empty. Defensive: this is model output.
 function renderBridge(answer) {
-  const a = (answer && typeof answer === "object") ? answer : {};
-  const assessment = (a.assessment && typeof a.assessment === "object") ? a.assessment : null;
-  const premiums = Array.isArray(a.premiums) ? a.premiums : [];
-  const procedures = Array.isArray(a.procedures) ? a.procedures : [];
-  const warnings = Array.isArray(a.warnings) ? a.warnings : [];
-  const reasoning = Array.isArray(a.reasoning) ? a.reasoning : [];
-  const total = (typeof a.total === "number") ? a.total : 0;
-  const claimLine = (typeof a.claim_line === "string") ? a.claim_line : "";
-  const ask = (typeof a.ask === "string" ? a.ask : "").trim();
-
+  const r = normalizeBridge(answer);
   setBadge("via your Claude", "ok");
 
-  // hero: assessment is the big code + amount; total is the answer's own total.
-  $("hero-code").textContent = (assessment && assessment.code) ? assessment.code : "—";
-  $("hero-label").textContent = (assessment && assessment.label) ? assessment.label : "No assessment code returned.";
-  $("hero-total").innerHTML = totalHtml(total);
+  const codesText = r.codes.length ? r.codes.join(" ") : "—";
 
-  // line items: assessment ($), premiums (the .detail string), procedures ($).
-  const ul = $("line-items");
-  ul.innerHTML = "";
-  if (assessment && assessment.code) {
-    ul.appendChild(bridgeRow(assessment.code, assessment.label, "assessment", money(assessment.amount), false));
-  }
-  premiums.forEach((p) => { p = p || {}; ul.appendChild(bridgeRow(p.code, p.label, "premium", p.detail || "", true)); });
-  procedures.forEach((p) => { p = p || {}; ul.appendChild(bridgeRow(p.code, p.label, "procedure", money(p.amount), false)); });
+  // hero: the CODES are the big monospace answer; note is the primary line under them.
+  $("hero-code").textContent = codesText;
+  $("hero-label").textContent = r.note || (r.codes.length ? "" : "No codes returned.");
+  // NO fee/total on the bridge path — the user writes the code, not a dollar amount.
+  $("hero-total").innerHTML = "";
 
-  // warnings (amber callout inside the answer)
-  const wEl = $("hero-warnings");
-  wEl.innerHTML = "";
-  if (warnings.length) {
-    wEl.hidden = false;
-    warnings.forEach((w) => { const li = document.createElement("li"); li.textContent = w; wEl.appendChild(li); });
-  } else { wEl.hidden = true; }
+  // why: small, top-right slot.
+  $("hero-note").textContent = r.why || "";
 
-  // no per-line "* unconfirmed" flagging on the bridge path
-  $("hero-unconfirmed").hidden = true;
-  $("hero-unconfirmed").textContent = "";
+  // the new shape carries no per-code fees / warnings / unconfirmed flags.
+  $("line-items").innerHTML = "";
+  $("hero-warnings").hidden = true; $("hero-warnings").innerHTML = "";
+  $("hero-unconfirmed").hidden = true; $("hero-unconfirmed").textContent = "";
 
-  // claim line (Copy + exports read state below)
-  $("claim-line").textContent = claimLine || "—";
+  // claim line = the codes you write onto Epic (space-joined); Copy claim line copies this.
+  $("claim-line").textContent = codesText;
 
-  // a clarifying question, shown prominently, only when the bridge asked one
-  if (ask) showAsk(ask); else hideAsk();
+  // a clarifying question, shown prominently, only when the bridge asked one.
+  if (r.ask) showAsk(r.ask); else hideAsk();
 
-  // note
-  const n = (assessment && assessment.code ? 1 : 0) + premiums.length + procedures.length;
-  $("hero-note").textContent = n ? `${n} code${n > 1 ? "s" : ""}` : "";
+  // no reasoning list / source URLs on the terse shape — hide those disclosures.
+  $("why").innerHTML = ""; $("why-wrap").style.display = "none";
+  $("sources").innerHTML = ""; $("sources-wrap").style.display = "none";
 
-  // why (reasoning)
-  const why = $("why");
-  why.innerHTML = "";
-  reasoning.forEach((line) => { const li = document.createElement("li"); li.textContent = line; why.appendChild(li); });
-  $("why-wrap").style.display = reasoning.length ? "" : "none";
-
-  // the bridge returns no source URLs; hide the Sources disclosure for this answer.
-  $("sources").innerHTML = "";
-  $("sources-wrap").style.display = "none";
-
-  // keep Copy + exports working: normalize into the pick() shape buildClaim understands.
-  const norm = {
-    assessment: assessment, premiums: premiums, procedures: procedures,
-    claim_line: claimLine, total: total, warnings: warnings, reasoning: reasoning,
-    has_unconfirmed: false,
-  };
-  state.lastResult = norm;
-  const today = new Date().toISOString().slice(0, 10);
-  state.lastClaim = state.buildClaim
-    ? state.buildClaim(norm, { ohip: getOhip(), group: getGroup(), date: today })
-    : null;
+  // Copy claim line reads state.lastResult.claim_line. No fee export on this path (nothing to total).
+  state.lastResult = { claim_line: r.codes.join(" "), codes: r.codes, note: r.note, why: r.why, ask: r.ask };
+  state.lastClaim = null;
 }
 
-function bridgeRow(code, label, tag, amountText, isDetail) {
+// Coerce model output into the terse bridge shape {codes[], note, why, ask}, dropping junk.
+function normalizeBridge(answer) {
+  const a = (answer && typeof answer === "object") ? answer : {};
+  const codes = Array.isArray(a.codes)
+    ? a.codes.filter((c) => typeof c === "string" && c.trim()).map((c) => c.trim())
+    : [];
+  const str = (v) => (typeof v === "string" ? v.trim() : "");
+  return { codes, note: str(a.note), why: str(a.why), ask: str(a.ask) };
+}
+
+// =====================================================================================
+// QUEUE — fire off many cases, copy the codes later.
+// Item shape: { id, case, status:'pending'|'running'|'done'|'error', result:{codes,note,why,ask}|null,
+//               error:string|null, ts }. Persisted to localStorage (billing_queue) on every change.
+// Worker keeps <= QUEUE_CONCURRENCY bridge POSTs in flight; unreachable -> stay pending + retry;
+// hard error -> status 'error' (case kept, Retry offered). Never loses a case.
+// =====================================================================================
+
+function genId() {
+  try { if (self.crypto && self.crypto.randomUUID) return self.crypto.randomUUID(); } catch (e) { /* older */ }
+  return "q" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function loadQueue() {
+  try {
+    const raw = localStorage.getItem(QUEUE_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.map((x) => {
+      x = x || {};
+      const done = x.status === "done" && x.result;
+      return {
+        id: x.id || genId(),
+        case: String(x.case || ""),
+        // Any interrupted 'running' from a previous session resumes as 'pending'.
+        status: done ? "done" : (x.status === "error" ? "error" : "pending"),
+        result: (x.result && typeof x.result === "object") ? normalizeBridge(x.result) : null,
+        error: (typeof x.error === "string") ? x.error : null,
+        ts: Number(x.ts) || Date.now(),
+      };
+    });
+  } catch (e) { return []; }
+}
+
+function saveQueue() {
+  try { localStorage.setItem(QUEUE_KEY, JSON.stringify(state.queue)); } catch (e) { /* private mode / quota */ }
+}
+
+function wireQueue() {
+  const addBtn = $("queue-btn");
+  if (addBtn) addBtn.addEventListener("click", () => {
+    const ta = $("case-text");
+    const hint = $("parse-hint");
+    const text = (ta && ta.value || "").trim();
+    if (!text) { if (hint) { hint.textContent = "Type a case to queue it."; hint.classList.add("err"); } return; }
+    if (hint) hint.classList.remove("err");
+    enqueue(text);
+    if (ta) { ta.value = ""; ta.focus(); }               // INSTANT: clear + keep typing the next case
+    if (hint) hint.textContent = "Queued. Add another — the codes fill in below.";
+  });
+
+  const copyAll = $("queue-copy-all");
+  if (copyAll) copyAll.addEventListener("click", (e) => {
+    // Every DONE item's codes, ONE LINE PER CASE — for the end-of-day face sheet.
+    const lines = state.queue
+      .filter((x) => x.status === "done" && x.result)
+      .map((x) => (x.result.codes || []).join(" "))
+      .filter((s) => s.length);
+    if (!lines.length) { toast("No finished cases yet"); return; }
+    copyOut(lines.join("\n"), e.currentTarget, lines.length + " case" + (lines.length > 1 ? "s" : "") + " copied");
+  });
+
+  const clearDone = $("queue-clear-done");
+  if (clearDone) clearDone.addEventListener("click", () => {
+    state.queue = state.queue.filter((x) => x.status !== "done");
+    saveQueue(); renderQueue();
+  });
+
+  const clearAll = $("queue-clear-all");
+  if (clearAll) clearAll.addEventListener("click", () => {
+    if (state.queue.length && !confirm("Clear the entire queue? Unfinished cases will be lost.")) return;
+    state.queue = [];
+    saveQueue(); renderQueue();
+  });
+}
+
+function enqueue(text) {
+  state.queue.push({ id: genId(), case: text, status: "pending", result: null, error: null, ts: Date.now() });
+  saveQueue(); renderQueue();
+  pumpQueue();
+}
+
+function removeQueueItem(id) {
+  const i = state.queue.findIndex((x) => x.id === id);
+  if (i >= 0) state.queue.splice(i, 1);
+  saveQueue(); renderQueue();
+}
+
+function retryQueueItem(id) {
+  const it = state.queue.find((x) => x.id === id);
+  if (!it) return;
+  it.status = "pending"; it.error = null;
+  saveQueue(); renderQueue();
+  pumpQueue();
+}
+
+// A failure is "unreachable" (keep pending + retry) vs a "hard error" (mark error, offer Retry).
+// Network failures + timeouts are unreachable; an HTTP status or an unparseable body is a hard error.
+function isUnreachable(e) {
+  if (!e) return true;
+  if (e.name === "AbortError") return true;      // timeout (our AbortController)
+  if (e instanceof TypeError) return true;        // fetch could not reach the host
+  return /failed to fetch|networkerror|load failed|network request failed/i.test(String(e.message || e));
+}
+
+// The worker. Starts as many pending items as the concurrency budget allows; each item that
+// finishes calls pumpQueue() again from its .finally, so the next pending starts immediately.
+function pumpQueue() {
+  const url = effectiveBridgeUrl(), token = getBridgeToken();
+  const hasPending = state.queue.some((q) => q.status === "pending");
+  if (!url || !token) {
+    // No reachable bridge configured yet — keep everything pending and retry on a timer.
+    if (hasPending) ensureQueueRetryTimer();
+    return;
+  }
+  while (queueInFlight < QUEUE_CONCURRENCY) {
+    const next = state.queue.find((q) => q.status === "pending");
+    if (!next) break;
+    startQueueItem(next, url, token);   // flips it to 'running' synchronously, so it won't be re-picked
+  }
+  if (state.queue.some((q) => q.status === "pending")) ensureQueueRetryTimer();
+}
+
+function startQueueItem(item, url, token) {
+  item.status = "running";
+  item.error = null;
+  queueInFlight++;
+  saveQueue(); renderQueue();
+  callBridge(url, token, item.case)
+    .then((answer) => {
+      item.status = "done";
+      item.result = normalizeBridge(answer);
+      item.error = null;
+    })
+    .catch((e) => {
+      if (isUnreachable(e)) {
+        item.status = "pending";          // bridge dropped mid-flight — never lose the case
+        ensureQueueRetryTimer();
+      } else {
+        item.status = "error";            // HTTP status / unparseable answer — keep case, allow Retry
+        item.error = String((e && e.message) || e).slice(0, 200);
+      }
+    })
+    .finally(() => {
+      queueInFlight--;
+      saveQueue(); renderQueue();
+      pumpQueue();                        // as each finishes, start the next pending
+    });
+}
+
+// A single self-clearing interval: while any item is pending, re-check discovery + re-pump ~every
+// 15s. Stops itself once nothing is pending. bridgeStatus() also pumps the instant it goes green.
+function ensureQueueRetryTimer() {
+  if (queueRetryTimer) return;
+  queueRetryTimer = setInterval(async () => {
+    if (!state.queue.some((q) => q.status === "pending")) {
+      clearInterval(queueRetryTimer); queueRetryTimer = null; return;
+    }
+    await fetchDiscovery();   // a just-restarted bridge may publish a fresh tunnel URL
+    pumpQueue();
+  }, QUEUE_RETRY_MS);
+}
+
+// ---- queue render ----
+function truncateCase(t, n) {
+  t = String(t || "").replace(/\s+/g, " ").trim();
+  return t.length > n ? t.slice(0, n - 1) + "…" : t;
+}
+
+function queueStatusLabel(s) {
+  return s === "pending" ? "Pending" : s === "error" ? "Error" : s === "done" ? "Done" : s;
+}
+
+function renderQueue() {
+  const panel = $("queue-panel"), list = $("queue-list");
+  if (!panel || !list) return;
+  const q = state.queue;
+  panel.hidden = q.length === 0;
+  list.innerHTML = "";
+  for (const item of q) list.appendChild(renderQueueItem(item));
+
+  const doneCount = q.filter((x) => x.status === "done").length;
+  const copyAll = $("queue-copy-all"), clearDone = $("queue-clear-done");
+  if (copyAll) copyAll.disabled = doneCount === 0;
+  if (clearDone) clearDone.disabled = doneCount === 0;
+}
+
+function renderQueueItem(item) {
   const li = document.createElement("li");
-  const c = document.createElement("span"); c.className = "li-code"; c.textContent = code || "—";
-  const lab = document.createElement("span"); lab.className = "li-lab"; lab.textContent = label || "";
-  const t = document.createElement("span"); t.className = "li-tag"; t.textContent = tag; lab.appendChild(t);
-  const amt = document.createElement("span");
-  amt.className = "li-amt" + (isDetail ? " percent" : ""); // detail strings styled like percent premiums
-  amt.textContent = amountText || "";
-  li.appendChild(c); li.appendChild(lab); li.appendChild(amt);
+  li.className = "q-item q-" + item.status;
+  li.dataset.status = item.status;
+
+  const head = document.createElement("div");
+  head.className = "q-head";
+
+  const status = document.createElement("span");
+  status.className = "q-status";
+  if (item.status === "running") {
+    const sp = document.createElement("span"); sp.className = "spinner"; sp.setAttribute("aria-hidden", "true");
+    const t = document.createElement("span"); t.textContent = "Running";
+    status.appendChild(sp); status.appendChild(t);
+  } else {
+    status.textContent = queueStatusLabel(item.status);
+  }
+  head.appendChild(status);
+
+  const rm = document.createElement("button");
+  rm.type = "button"; rm.className = "q-x"; rm.textContent = "×";
+  rm.title = "Remove"; rm.setAttribute("aria-label", "Remove case");
+  rm.addEventListener("click", () => removeQueueItem(item.id));
+  head.appendChild(rm);
+  li.appendChild(head);
+
+  const caseEl = document.createElement("p");
+  caseEl.className = "q-case";
+  caseEl.textContent = truncateCase(item.case, 150);
+  caseEl.title = item.case;
+  li.appendChild(caseEl);
+
+  if (item.status === "done" && item.result) {
+    li.appendChild(renderQueueDone(item.result));
+  } else if (item.status === "error") {
+    const err = document.createElement("p");
+    err.className = "q-err";
+    err.textContent = item.error ? ("Error: " + item.error) : "Bridge error.";
+    li.appendChild(err);
+    const retry = document.createElement("button");
+    retry.type = "button"; retry.className = "btn outline mini";
+    retry.textContent = "Retry";
+    retry.addEventListener("click", () => retryQueueItem(item.id));
+    li.appendChild(retry);
+  }
   return li;
+}
+
+function renderQueueDone(r) {
+  const wrap = document.createElement("div");
+  wrap.className = "q-done";
+
+  const top = document.createElement("div");
+  top.className = "q-done-top";
+
+  const codes = document.createElement("span");
+  codes.className = "q-codes";
+  codes.textContent = r.codes.length ? r.codes.join(" ") : "—";
+  top.appendChild(codes);
+
+  const copy = document.createElement("button");
+  copy.type = "button"; copy.className = "btn outline mini q-copy";
+  copy.textContent = "Copy";
+  copy.title = "Copy the codes (space-joined)";
+  copy.addEventListener("click", (e) => copyOut(r.codes.join(" "), e.currentTarget, "Codes copied"));
+  top.appendChild(copy);
+  wrap.appendChild(top);
+
+  if (r.note) { const p = document.createElement("p"); p.className = "q-note"; p.textContent = r.note; wrap.appendChild(p); }
+  if (r.why)  { const p = document.createElement("p"); p.className = "q-why";  p.textContent = r.why;  wrap.appendChild(p); }
+  if (r.ask)  { const p = document.createElement("p"); p.className = "q-ask";  p.textContent = r.ask;  wrap.appendChild(p); }
+
+  return wrap;
 }
 
 function showAsk(text) { const el = $("bridge-ask"); if (!el) return; el.textContent = text; el.hidden = false; }

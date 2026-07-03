@@ -89,8 +89,25 @@
         placeholder="e.g. 2am, chest pain, full workup, intubated, then admitted"></textarea>
       <div class="row">
         <button id="parse-btn" class="btn" type="button">Read the case</button>
+        <button id="queue-btn" class="btn outline" type="button" title="Fire this case off and keep going — the codes fill in below">Add to queue</button>
         <span id="parse-hint" class="hint">Type the case, or set the chips below.</span>
       </div>
+    </section>
+
+    <!-- QUEUE: fire off many cases without waiting; codes fill in as each finishes. Processed by the
+         same bridge (your Claude), max 3 in flight. Persisted to localStorage (billing_queue) so a
+         refresh/close never loses a case. Hidden until the first case is queued. -->
+    <section class="panel queue" id="queue-panel" aria-label="Case queue" hidden>
+      <div class="queue-head">
+        <h2 class="queue-title">Queue</h2>
+        <div class="queue-actions">
+          <button id="queue-copy-all" class="btn outline mini" type="button"
+            title="Copy every finished case's codes — one line per case, for the end-of-day face sheet">Copy all codes</button>
+          <button id="queue-clear-done" class="btn outline mini" type="button">Clear done</button>
+          <button id="queue-clear-all" class="btn outline mini" type="button">Clear all</button>
+        </div>
+      </div>
+      <ul id="queue-list" class="queue-list"></ul>
     </section>
 
     <!-- INPUT (b): quick-pick chips, built from data/rules.json + data/codes.json -->
