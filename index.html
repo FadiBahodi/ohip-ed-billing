@@ -17,6 +17,32 @@
       <p class="sub">OHIP ED code advisor · THP Credit Valley · a code advisor, not a submitter</p>
     </header>
 
+    <!-- CONNECT (headline feature): reach the user's OWN Claude via their local bridge. Always
+         visible, top of the input column — no expanding, no scrolling. The bridge URL/token live
+         ONLY in this browser (localStorage keys billing_bridge_url / billing_bridge_token) and are
+         used only to POST the case to the user's own `claude -p` bridge. Blank = local engine. -->
+    <section class="panel connect" aria-label="Connect your Claude">
+      <h2 class="connect-title">Use your Claude</h2>
+      <p class="connect-lede">Free, via your Mac. Paste the URL + token from your bridge; then Read the
+        case reasons with your Claude. Leave blank to use the local engine.</p>
+      <div class="settings-grid">
+        <label class="settings-field">
+          <span class="field-label">Assistant bridge URL</span>
+          <input id="set-bridge-url" class="search" type="url"
+            autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…trycloudflare.com" />
+        </label>
+        <label class="settings-field">
+          <span class="field-label">Bridge token</span>
+          <input id="set-bridge-token" class="search" type="text"
+            autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste the token" />
+        </label>
+      </div>
+      <div class="connect-status" id="bridge-status" role="status" aria-live="polite">
+        <span class="status-dot" id="bridge-status-dot"></span>
+        <span class="status-text" id="bridge-status-text">Local engine — paste your bridge URL + token above to use your Claude</span>
+      </div>
+    </section>
+
     <!-- THE ANSWER (hero). id="output" is the live result region. -->
     <section id="output" class="hero" aria-live="polite" aria-label="Recommended codes">
       <div class="hero-top">
@@ -95,8 +121,7 @@
       <summary>Settings — your billing numbers</summary>
       <div class="disclose-body">
         <p class="settings-note">Enter these once. They are saved only in <strong>this browser</strong>
-          (localStorage) and fill the claim header, CSV, and FHIR export. Nothing leaves the page unless
-          you set the assistant bridge below.</p>
+          (localStorage) and fill the claim header, CSV, and FHIR export.</p>
         <div class="settings-grid">
           <label class="settings-field">
             <span class="field-label">OHIP billing #</span>
@@ -108,18 +133,7 @@
             <input id="set-group" class="search" type="text"
               autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. 0000" />
           </label>
-          <label class="settings-field">
-            <span class="field-label">Assistant bridge URL</span>
-            <input id="set-bridge-url" class="search" type="url"
-              autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…trycloudflare.com" />
-          </label>
-          <label class="settings-field">
-            <span class="field-label">Bridge token</span>
-            <input id="set-bridge-token" class="search" type="text"
-              autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste the token" />
-          </label>
         </div>
-        <p class="settings-hint">Run bridge/START.sh on your Mac, paste the URL + token here. Uses your Claude, free. Leave blank to use the local engine.</p>
         <div class="row">
           <button id="settings-clear" class="btn ghost" type="button">Clear</button>
           <span id="settings-status" class="hint">Until set, the claim header shows “OHIP# —”.</span>

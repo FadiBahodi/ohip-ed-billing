@@ -493,6 +493,49 @@ body {
   .settings-grid { grid-template-columns: 1fr; }
 }
 
+/* ---- connect card: the headline feature — reach the user's OWN Claude. Always visible,
+   top of the input column. Accented but calm; the status dot turns the app green when connected. */
+.connect {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 10px 26px -20px rgba(12, 125, 107, 0.65);
+}
+.connect-title {
+  margin: 0 0 4px;
+  font-size: 16.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+.connect-lede {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.connect-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 13px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.connect-status .status-dot {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--muted);
+  box-shadow: 0 0 0 3px rgba(138, 153, 165, 0.16);
+  transition: background 0.18s var(--ease), box-shadow 0.18s var(--ease);
+}
+.connect-status.on { color: var(--ink-soft); }
+.connect-status.on .status-dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
 /* ---- assistant bridge: the clarifying question, shown prominently on the dark hero ---- */
 .bridge-ask {
   margin: 12px 0 0;

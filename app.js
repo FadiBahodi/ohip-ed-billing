@@ -203,30 +203,42 @@ function wireSettings() {
   if (tokIn) tokIn.value = getBridgeToken();
 
   const refresh = () => {
-    const o = getOhip(), g = getGroup(), bridge = !!getBridgeUrl();
-    const base = (o || g)
+    const o = getOhip(), g = getGroup();
+    status.textContent = (o || g)
       ? `Saved in this browser: OHIP# ${o || "—"} · Group ${g || "—"}`
       : "Until set, the claim header shows “OHIP# —”.";
-    status.textContent = base + (bridge ? " · Read the case uses your Claude." : "");
+  };
+
+  // Live status for the prominent "Use your Claude" card: GREEN "Connected" when BOTH the bridge
+  // URL and token are set, else GREY "Local engine". Updates on every keystroke and on init.
+  const bridgeStatus = () => {
+    const wrap = $("bridge-status"), txt = $("bridge-status-text");
+    if (!wrap || !txt) return;
+    const connected = !!(getBridgeUrl() && getBridgeToken());
+    wrap.classList.toggle("on", connected); // .on drives the green dot + text via CSS
+    txt.textContent = connected
+      ? "Connected — Read the case uses your Claude"
+      : "Local engine — paste your bridge URL + token above to use your Claude";
   };
 
   ohipIn.addEventListener("input", () => { setStored(OHIP_KEY, ohipIn.value.trim()); refresh(); compute(); });
   groupIn.addEventListener("input", () => { setStored(GROUP_KEY, groupIn.value.trim()); refresh(); compute(); });
   if (urlIn) urlIn.addEventListener("input", () => {
     // Trim any trailing slash(es); the bridge path (/bill) is appended at call time.
-    setStored(BRIDGE_URL_KEY, urlIn.value.trim().replace(/\/+$/, "")); refresh();
+    setStored(BRIDGE_URL_KEY, urlIn.value.trim().replace(/\/+$/, "")); bridgeStatus();
   });
-  if (tokIn) tokIn.addEventListener("input", () => { setStored(BRIDGE_TOKEN_KEY, tokIn.value.trim()); });
+  if (tokIn) tokIn.addEventListener("input", () => { setStored(BRIDGE_TOKEN_KEY, tokIn.value.trim()); bridgeStatus(); });
   clearBtn.addEventListener("click", () => {
     setStored(OHIP_KEY, ""); setStored(GROUP_KEY, "");
     setStored(BRIDGE_URL_KEY, ""); setStored(BRIDGE_TOKEN_KEY, "");
     ohipIn.value = ""; groupIn.value = "";
     if (urlIn) urlIn.value = ""; if (tokIn) tokIn.value = "";
-    refresh(); compute();
+    refresh(); bridgeStatus(); compute();
     toast("Settings cleared");
   });
 
   refresh();
+  bridgeStatus();
 }
 
 // ---- (a) free text -> parse -> chips + pick() ----
