@@ -1,0 +1,258 @@
+{
+  "time_bands": [
+    {
+      "id": "day",
+      "label": "Weekday day",
+      "hours_rule": "Mon-Fri 08:00-17:00. H10x assessment series."
+    },
+    {
+      "id": "evening",
+      "label": "Weekday evening",
+      "hours_rule": "Mon-Fri 17:00-24:00. H13x assessment series."
+    },
+    {
+      "id": "night",
+      "label": "Night",
+      "hours_rule": "00:00-08:00 any day (including weekends). H12x assessment series."
+    },
+    {
+      "id": "weekend_holiday",
+      "label": "Weekend/holiday",
+      "hours_rule": "Sat/Sun/statutory holiday 08:00-24:00. H15x assessment series."
+    }
+  ],
+  "complexity_levels": [
+    {
+      "id": "minor",
+      "label": "Minor",
+      "definition": "Single system or single site; brief history and exam."
+    },
+    {
+      "id": "comprehensive",
+      "label": "Comprehensive",
+      "definition": "Full history (meds, PMHx, social) + exam + review of one system in depth."
+    },
+    {
+      "id": "multiple_systems",
+      "label": "Multiple systems",
+      "definition": "Detailed history and exam of more than one organ system."
+    },
+    {
+      "id": "reassessment",
+      "label": "Re-assessment",
+      "definition": "Repeat assessment same visit. Max 2/patient/physician/day. Not payable for discharge, admission by ED MD, or when it leads to a consult referral."
+    },
+    {
+      "id": "consultation",
+      "label": "Consultation",
+      "definition": "Referred consultation to the ED physician (H055 specialist/FRCP, H065 family/CCFP-EM)."
+    },
+    {
+      "id": "critical",
+      "label": "Critical care",
+      "definition": "Life-threatening resuscitation; billed time-based via G521/G523/G522 instead of an H assessment. No re-assessment with critical care."
+    },
+    {
+      "id": "resus",
+      "label": "Resuscitation",
+      "definition": "Non-G521 resuscitation billed time-based via G395/G391."
+    }
+  ],
+  "assessment_map": [
+    {
+      "prefix": "H",
+      "time_band": "day",
+      "complexity": "minor",
+      "code": "H101"
+    },
+    {
+      "prefix": "H",
+      "time_band": "day",
+      "complexity": "comprehensive",
+      "code": "H102"
+    },
+    {
+      "prefix": "H",
+      "time_band": "day",
+      "complexity": "multiple_systems",
+      "code": "H103"
+    },
+    {
+      "prefix": "H",
+      "time_band": "day",
+      "complexity": "reassessment",
+      "code": "H104"
+    },
+    {
+      "prefix": "H",
+      "time_band": "evening",
+      "complexity": "minor",
+      "code": "H131"
+    },
+    {
+      "prefix": "H",
+      "time_band": "evening",
+      "complexity": "comprehensive",
+      "code": "H132"
+    },
+    {
+      "prefix": "H",
+      "time_band": "evening",
+      "complexity": "multiple_systems",
+      "code": "H133"
+    },
+    {
+      "prefix": "H",
+      "time_band": "evening",
+      "complexity": "reassessment",
+      "code": "H134"
+    },
+    {
+      "prefix": "H",
+      "time_band": "night",
+      "complexity": "minor",
+      "code": "H121"
+    },
+    {
+      "prefix": "H",
+      "time_band": "night",
+      "complexity": "comprehensive",
+      "code": "H122"
+    },
+    {
+      "prefix": "H",
+      "time_band": "night",
+      "complexity": "multiple_systems",
+      "code": "H123"
+    },
+    {
+      "prefix": "H",
+      "time_band": "night",
+      "complexity": "reassessment",
+      "code": "H124"
+    },
+    {
+      "prefix": "H",
+      "time_band": "weekend_holiday",
+      "complexity": "minor",
+      "code": "H151"
+    },
+    {
+      "prefix": "H",
+      "time_band": "weekend_holiday",
+      "complexity": "comprehensive",
+      "code": "H152"
+    },
+    {
+      "prefix": "H",
+      "time_band": "weekend_holiday",
+      "complexity": "multiple_systems",
+      "code": "H153"
+    },
+    {
+      "prefix": "H",
+      "time_band": "weekend_holiday",
+      "complexity": "reassessment",
+      "code": "H154"
+    },
+    {
+      "prefix": "A",
+      "time_band": "any",
+      "complexity": "minor",
+      "code": "A001"
+    },
+    {
+      "prefix": "A",
+      "time_band": "any",
+      "complexity": "comprehensive",
+      "code": "A007"
+    },
+    {
+      "prefix": "A",
+      "time_band": "any",
+      "complexity": "multiple_systems",
+      "code": "A003"
+    },
+    {
+      "prefix": "G",
+      "time_band": "any",
+      "complexity": "critical",
+      "code": "G521"
+    },
+    {
+      "prefix": "G",
+      "time_band": "any",
+      "complexity": "resus",
+      "code": "G395"
+    }
+  ],
+  "svp_map": {
+    "not_on_call": {
+      "day": {
+        "travel": "K960",
+        "first_person": "K990",
+        "additional_person": "K991"
+      },
+      "evening": {
+        "travel": "K962",
+        "first_person": "K994",
+        "additional_person": "K995"
+      },
+      "night": {
+        "travel": "K964",
+        "first_person": "K996",
+        "additional_person": "K997"
+      },
+      "weekend_holiday": {
+        "travel": "K963",
+        "first_person": "K998",
+        "additional_person": "K999"
+      }
+    },
+    "on_call": {
+      "day": {
+        "travel": "H960",
+        "first_person": "H980",
+        "additional_person": "H981"
+      },
+      "evening": {
+        "travel": "H962",
+        "first_person": "H984",
+        "additional_person": "H985"
+      },
+      "night": {
+        "travel": "H964",
+        "first_person": "H986",
+        "additional_person": "H987"
+      },
+      "weekend_holiday": {
+        "travel": "H963",
+        "first_person": "H988",
+        "additional_person": "H989"
+      }
+    }
+  },
+  "svp_assessment_by_complexity": {
+    "minor": "A001",
+    "comprehensive": "A007",
+    "multiple_systems": "A003"
+  },
+  "svp_rule": "SVP requires an A-prefix assessment; cannot attach to an H-prefix ED code",
+  "svp_rule_detail": "Special Visit Premiums require an A-prefix assessment code (A001/A007/A003). They CANNOT be billed with H-prefix ED assessment codes (H101-H154). The premium code itself is K-prefix when not on-call, or H9xx-prefix when on-call. After the max number of premiums per period is reached, revert to H-prefix assessment codes. (DoctorCare ON ER Special Premiums QRG, Feb 2026)",
+  "procedure_stacking": "procedures bill on top of the assessment",
+  "one_assessment_per_patient": true,
+  "fee_notes": [
+    "H-prefix ED assessment codes received a 4.33% increase effective 2025-04-01 (OHIP Bulletin 260102, 2024 PSA). Amounts here are the pre-increase schedule values -> treat as a FLOOR; confirm exact current $ against the live SOB before submission.",
+    "Amounts marked amount_confirmed:false have a sourced CODE but no confirmed $ on the fetched sheets (mostly fracture F-codes, dislocation D-codes, and procedures the sheets list without a price). Confirm $ against the SOB.",
+    "Re-assessments limited to 2/patient/physician/day; not payable for discharge, admission by the ED MD, or when they lead to a consult referral."
+  ],
+  "sources": {
+    "EMLONDON": "https://emlondon.ca/emergency-ohip-fee-codes/",
+    "DC_QRG": "https://doctorcare.ca/wp-content/uploads/2026/02/DoctorCare_ON_QRG_ER_SpecialPremiums_Feb2026-1.pdf",
+    "DC_ER": "https://www.doctorcare.ca/wp-content/uploads/2024/03/DoctorCare_ON_ERBillingSheet_Feb-2024.pdf",
+    "SCHULICH": "https://www.schulich.uwo.ca/emergency_medicine/resources/Billing%20cards%20-%20July%202023%20rev.pdf",
+    "SOB": "https://www.ontario.ca/page/ohip-schedule-benefits-and-fees",
+    "BULLETIN": "https://www.ontario.ca/document/ohip-infobulletins-2026/bulletin-260102-2024-physician-services-agreement-emergency-department"
+  },
+  "generated": "2026-07-02"
+}

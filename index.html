@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>What do I bill? — OHIP ED code advisor</title>
+  <meta name="description" content="OHIP emergency department code advisor. Grounded in the live Schedule of Benefits, not hallucinated. A code advisor, not a submitter. Runs entirely in your browser — no accounts, no network, no data leaves the page." />
+  <meta name="theme-color" content="#0e1a22" />
+  <!-- empty icon: prevents a /favicon.ico 404, no network -->
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="masthead">
+      <h1>What do I bill?</h1>
+      <p class="sub">OHIP ED code advisor · a code advisor, not a submitter</p>
+    </header>
+
+    <!-- THE ANSWER (hero). id="output" is the live result region. -->
+    <section id="output" class="hero" aria-live="polite" aria-label="Recommended codes">
+      <div class="hero-top">
+        <span id="engine-badge" class="badge">loading</span>
+        <span id="hero-note" class="hero-note"></span>
+      </div>
+
+      <div class="hero-answer">
+        <div class="hero-code-wrap">
+          <span id="hero-code" class="hero-code">—</span>
+          <span id="hero-label" class="hero-label">Pick a time band and complexity, or read a case.</span>
+        </div>
+        <span id="hero-total" class="hero-total">$0<span class="cents">.00</span></span>
+      </div>
+
+      <ul id="line-items" class="line-items"></ul>
+      <p id="hero-unconfirmed" class="hero-unconfirmed" hidden></p>
+
+      <div class="claim-row">
+        <code id="claim-line" class="claim-line">—</code>
+      </div>
+
+      <div class="actions">
+        <button id="copy-claim" class="btn primary" type="button">Copy claim line</button>
+        <div id="export" class="export" role="group" aria-label="Export">
+          <button class="btn ghost" type="button" data-export="text" title="Copy the full claim block">Copy text</button>
+          <button class="btn ghost" type="button" data-export="csv" title="Download a biller-ready CSV">CSV</button>
+          <button class="btn ghost" type="button" data-export="epic" title="Copy an Epic Charge Capture cheat card">Epic card</button>
+        </div>
+      </div>
+      <p id="copy-toast" class="toast" role="status" aria-live="polite"></p>
+    </section>
+
+    <!-- INPUT (a): free text -> parse -> chips + pick() -->
+    <section class="panel" aria-label="Read the case">
+      <label class="field-label" for="case-text">Read the case</label>
+      <textarea id="case-text" class="freetext"
+        placeholder="e.g. 2am, chest pain, full workup, intubated, then admitted"></textarea>
+      <div class="row">
+        <button id="parse-btn" class="btn" type="button">Read the case</button>
+        <span id="parse-hint" class="hint">Type the case, or set the chips below.</span>
+      </div>
+    </section>
+
+    <!-- INPUT (b): quick-pick chips, built from data/rules.json + data/codes.json -->
+    <section class="panel" aria-label="Quick pick">
+      <div class="pickgroup">
+        <div class="group-label">Time band</div>
+        <div id="time-chips" class="chips" role="radiogroup" aria-label="Time band"></div>
+      </div>
+      <div class="pickgroup">
+        <div class="group-label">Complexity</div>
+        <div id="complexity-chips" class="chips" role="radiogroup" aria-label="Complexity"></div>
+      </div>
+      <div class="pickgroup">
+        <div class="group-label">Special visit</div>
+        <div id="svp-chips" class="chips" aria-label="Special visit premium"></div>
+      </div>
+      <div class="pickgroup">
+        <div class="group-label">Procedures <span class="muted">(stack on top)</span></div>
+        <input id="proc-search" class="search" type="text" placeholder="Search all procedures…"
+          autocomplete="off" autocapitalize="off" spellcheck="false" />
+        <div id="procedure-chips" class="chips" aria-label="Procedures"></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS: your billing numbers. Stored ONLY in this browser (localStorage). Never sent anywhere. -->
+    <details class="disclose" id="settings-wrap">
+      <summary>Settings — your billing numbers</summary>
+      <div class="disclose-body">
+        <p class="settings-note">Enter these once. They are saved only in <strong>this browser</strong>
+          (localStorage) and are used to fill the claim header, CSV, and FHIR export. Nothing is sent
+          anywhere — this page has no server and makes no network calls.</p>
+        <div class="settings-grid">
+          <label class="settings-field">
+            <span class="field-label">OHIP billing #</span>
+            <input id="set-ohip" class="search" type="text" inputmode="numeric"
+              autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. 000000" />
+          </label>
+          <label class="settings-field">
+            <span class="field-label">Group billing #</span>
+            <input id="set-group" class="search" type="text"
+              autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. 0000" />
+          </label>
+        </div>
+        <div class="row">
+          <button id="settings-clear" class="btn ghost" type="button">Clear</button>
+          <span id="settings-status" class="hint">Until set, the claim header shows “OHIP# —”.</span>
+        </div>
+      </div>
+    </details>
+
+    <!-- SECONDARY detail, progressively disclosed -->
+    <details class="disclose" id="why-wrap">
+      <summary>Why these codes</summary>
+      <div class="disclose-body"><ul id="why" class="reasoning"></ul></div>
+    </details>
+
+    <details class="disclose" id="sources-wrap">
+      <summary>Sources</summary>
+      <div class="disclose-body"><div id="sources" class="citations"></div></div>
+    </details>
+
+    <footer class="foot" id="data-note">
+      Grounded in the live OHIP Schedule of Benefits + EM London + DoctorCare QRG. Every code cites a source.
+      Amounts marked * are unconfirmed against the current SOB. This produces the code + claim line you type into
+      Epic Charge Capture or hand to the biller. It does not submit to the MOH. Runs fully in your browser.
+    </footer>
+  </main>
+
+  <!-- Local module only. No external scripts, no keys, no network. -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
