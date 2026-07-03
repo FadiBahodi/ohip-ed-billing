@@ -85,7 +85,38 @@ async function textOf(page, sel) {
     const exportBtns = await page.$$("#export [data-export]");
     res.export_ok = exportBtns.length >= 2;
 
-    res.passed = res.chips_ok && res.freetext_ok && res.copy_ok && res.export_ok && errors.length === 0;
+    // helper: type a query into the procedure search (clearing any prior text first), then tap the code chip
+    async function pickProc(code) {
+      await page.focus("#proc-search");
+      // hard-clear the field and fire the input event so the chip list re-renders from empty
+      await page.$eval("#proc-search", (el) => { el.value = ""; el.dispatchEvent(new Event("input", { bubbles: true })); });
+      await page.type("#proc-search", code, { delay: 10 });          // filters the chips down to this code
+      await clickSel(page, `#procedure-chips [data-id="${code}"]`);  // tap the matching code chip
+    }
+
+    // (A) ONE REDUCTION PER SITE: ankle fracture (F075) + ankle dislocation (D035).
+    // Must show the "one reduction per site" warning and must NOT bill both (D035 excluded).
+    await pickProc("F075");
+    await pickProc("D035");
+    await waitText(page, "#hero-warnings", /reduction per site/i);
+    const warnText = await textOf(page, "#hero-warnings");
+    const lineText = await textOf(page, "#line-items");
+    res.reduction_ok =
+      /one reduction per site/i.test(warnText) &&   // the warning is surfaced
+      /\bF075\b/.test(lineText) &&                  // first reduction kept as a billed line
+      !/\bD035\b/.test(lineText);                   // duplicate NOT summed into the line items
+
+    // (B) PERCENT PREMIUM: E420 renders as a "+50%" premium line, not a flat $50.
+    await pickProc("E420");
+    await waitText(page, "#output", /E420/);
+    const eText = await textOf(page, "#output");
+    res.percent_ok =
+      /\bE420\b/.test(eText) &&                     // the code is present
+      /\+50%/.test(eText) &&                        // shown as a +50% premium
+      !/E420[^\n]*\$50\.00/.test(eText);            // NOT a flat $50.00 line
+
+    res.passed = res.chips_ok && res.freetext_ok && res.copy_ok && res.export_ok &&
+      res.reduction_ok && res.percent_ok && errors.length === 0;
   } catch (e) {
     errors.push("exception: " + (e && e.message ? e.message : String(e)));
   } finally {

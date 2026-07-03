@@ -466,7 +466,7 @@ body {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
 }
 
-/* ---- settings (your billing numbers; localStorage only) ---- */
+/* ---- settings (your billing numbers + optional assistant bridge; localStorage only) ---- */
 .settings-note {
   margin: 0 0 14px;
   color: var(--muted);
@@ -483,6 +483,30 @@ body {
 .settings-field { display: block; }
 .settings-field .field-label { display: block; margin-bottom: 6px; }
 .settings-field .search { margin-bottom: 0; }
+.settings-hint {
+  margin: 10px 0 2px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
 @media (max-width: 480px) {
   .settings-grid { grid-template-columns: 1fr; }
+}
+
+/* ---- assistant bridge: the clarifying question, shown prominently on the dark hero ---- */
+.bridge-ask {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: #eafff9;
+  background: rgba(111, 233, 207, 0.12);
+  border: 1px solid rgba(111, 233, 207, 0.38);
+  border-left: 3px solid var(--hero-code);
+  border-radius: var(--radius-sm);
+}
+.bridge-ask::before {
+  content: "Needs a detail: ";
+  font-weight: 700;
+  color: var(--hero-code);
 }

@@ -1,25 +1,34 @@
 // ED OHIP Billing Advisor — app controller (Subsystem 5, APP).
 // Wires: engine/parse.js (Read the case -> facts) -> engine/pick.js (facts -> codes)
 // -> engine/claim.js (codes -> copy line + CSV + Epic card). Deterministic. FREE.
-// No network, no LLM, no keys. Serves as static files (python3 -m http.server).
+// Local-only by default: no network, no LLM, no keys. The chips path is ALWAYS the local engine.
+// OPTIONAL assistant bridge: if the user sets a bridge URL+token in Settings, "Read the case"
+// POSTs the case to THEIR own local `claude -p` bridge (bridge/serve.py) and renders its answer.
+// Bridge is opt-in, token-gated, and falls back to the local engine on any error/timeout.
 //
 // The verified engines are UMD: imported in the browser they assign a global
 // (self.BillingEngine / BillingParse / BillingClaim) instead of ESM exports.
 // We call pick(facts,{codes,rules}) so its Node-only fs loader never runs client-side.
 
-// data + module locations. Root-relative ("./") so it resolves under github.io/<repo>/.
-// index.html sits at the site ROOT; data/ and engine/ are its siblings. NO leading slash.
-const RULES_PATHS  = ["./data/rules.json"];
-const CODES_PATHS  = ["./data/codes.json"];
-const ENGINE_PATHS = ["./engine/pick.js"];
-const PARSE_PATHS  = ["./engine/parse.js"];
-const CLAIM_PATHS  = ["./engine/claim.js"];
+// data + module locations. "../" resolves first (served from repo root -> /app/index.html).
+const RULES_PATHS  = ["../data/rules.json", "./data/rules.json", "/data/rules.json"];
+const CODES_PATHS  = ["../data/codes.json", "./data/codes.json", "/data/codes.json"];
+const ENGINE_PATHS = ["../engine/pick.js",  "./engine/pick.js",  "/engine/pick.js"];
+const PARSE_PATHS  = ["../engine/parse.js", "./engine/parse.js", "/engine/parse.js"];
+const CLAIM_PATHS  = ["../engine/claim.js", "./engine/claim.js", "/engine/claim.js"];
 
-// PRIVACY: no billing credentials in source. They live only in this browser's localStorage,
-// entered by the user in Settings. Empty until set -> the claim header shows "OHIP# —".
+// PRIVACY: no billing credentials or bridge secrets in source. They live only in this browser's
+// localStorage, entered by the user in Settings. Empty until set. The bridge URL/token are used ONLY
+// to reach the user's own local `claude -p` bridge; leave them blank to stay fully local.
 const OHIP_KEY = "billing_ohip", GROUP_KEY = "billing_group";
-function getOhip()  { try { return localStorage.getItem(OHIP_KEY)  || ""; } catch (e) { return ""; } }
-function getGroup() { try { return localStorage.getItem(GROUP_KEY) || ""; } catch (e) { return ""; } }
+const BRIDGE_URL_KEY = "billing_bridge_url", BRIDGE_TOKEN_KEY = "billing_bridge_token";
+const BRIDGE_TIMEOUT_MS = 130000; // ~130s: claude -p can take a while; longer than the bridge's own 120s.
+
+function lsGet(key)  { try { return localStorage.getItem(key) || ""; } catch (e) { return ""; } }
+function getOhip()   { return lsGet(OHIP_KEY); }
+function getGroup()  { return lsGet(GROUP_KEY); }
+function getBridgeUrl()   { return lsGet(BRIDGE_URL_KEY); }
+function getBridgeToken() { return lsGet(BRIDGE_TOKEN_KEY); }
 function setStored(key, val) {
   try { if (val) localStorage.setItem(key, val); else localStorage.removeItem(key); } catch (e) { /* private mode */ }
 }
@@ -29,7 +38,7 @@ const state = {
   pickFn: null, parseFn: null, buildClaim: null,
   facts: { time_band: "day", complexity: "comprehensive", procedures: [], special_visit: false },
   procQuery: "",
-  lastResult: null, lastClaim: null,
+  lastResult: null, lastClaim: null, loading: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -38,7 +47,7 @@ const $ = (id) => document.getElementById(id);
 init().catch((err) => {
   console.error(err);
   setBadge("data error", "warn");
-  $("hero-label").textContent = "Could not load the code base. Serve from the site root: python3 -m http.server 8795";
+  $("hero-label").textContent = "Could not load the code base. Serve from the billing/ root: python3 -m http.server 8791";
 });
 
 async function init() {
@@ -181,29 +190,40 @@ function wireSearch() {
   });
 }
 
-// ---- settings: OHIP# + group, stored ONLY in this browser's localStorage ----
+// ---- settings: OHIP# + group + optional assistant bridge, stored ONLY in localStorage ----
 function wireSettings() {
   const ohipIn = $("set-ohip"), groupIn = $("set-group");
+  const urlIn = $("set-bridge-url"), tokIn = $("set-bridge-token");
   const status = $("settings-status"), clearBtn = $("settings-clear");
   if (!ohipIn || !groupIn) return;
 
   ohipIn.value = getOhip();
   groupIn.value = getGroup();
+  if (urlIn) urlIn.value = getBridgeUrl();
+  if (tokIn) tokIn.value = getBridgeToken();
 
   const refresh = () => {
-    const o = getOhip(), g = getGroup();
-    status.textContent = (o || g)
+    const o = getOhip(), g = getGroup(), bridge = !!getBridgeUrl();
+    const base = (o || g)
       ? `Saved in this browser: OHIP# ${o || "—"} · Group ${g || "—"}`
       : "Until set, the claim header shows “OHIP# —”.";
+    status.textContent = base + (bridge ? " · Read the case uses your Claude." : "");
   };
 
   ohipIn.addEventListener("input", () => { setStored(OHIP_KEY, ohipIn.value.trim()); refresh(); compute(); });
   groupIn.addEventListener("input", () => { setStored(GROUP_KEY, groupIn.value.trim()); refresh(); compute(); });
+  if (urlIn) urlIn.addEventListener("input", () => {
+    // Trim any trailing slash(es); the bridge path (/bill) is appended at call time.
+    setStored(BRIDGE_URL_KEY, urlIn.value.trim().replace(/\/+$/, "")); refresh();
+  });
+  if (tokIn) tokIn.addEventListener("input", () => { setStored(BRIDGE_TOKEN_KEY, tokIn.value.trim()); });
   clearBtn.addEventListener("click", () => {
     setStored(OHIP_KEY, ""); setStored(GROUP_KEY, "");
+    setStored(BRIDGE_URL_KEY, ""); setStored(BRIDGE_TOKEN_KEY, "");
     ohipIn.value = ""; groupIn.value = "";
+    if (urlIn) urlIn.value = ""; if (tokIn) tokIn.value = "";
     refresh(); compute();
-    toast("Billing numbers cleared");
+    toast("Settings cleared");
   });
 
   refresh();
@@ -218,11 +238,37 @@ function wireFreeText() {
   });
 }
 
-function readCase() {
+// Router: bridge (the user's own Claude) when a bridge URL is set, else the local parser.
+// Falls back to the local engine on any bridge error/timeout/non-200.
+async function readCase() {
+  if (state.loading) return; // guard against double-submit (button disabled + Cmd+Enter)
   const text = $("case-text").value.trim();
   const hint = $("parse-hint");
   hint.classList.remove("err");
   if (!text) { hint.textContent = "Type the case first, or set the chips."; hint.classList.add("err"); return; }
+
+  const url = getBridgeUrl(), token = getBridgeToken();
+  if (url) {
+    setLoading(true);
+    setBadge("asking your Claude…", "info");
+    hint.textContent = "Asking your Claude…";
+    try {
+      const answer = await callBridge(url, token, text);
+      renderBridge(answer);
+      hint.textContent = "Answered by your Claude. Touch a chip to override with the local engine.";
+    } catch (e) {
+      console.warn("bridge failed, falling back to local engine:", e);
+      readCaseLocal(text, hint, true);
+    } finally {
+      setLoading(false);
+    }
+    return;
+  }
+  readCaseLocal(text, hint, false);
+}
+
+// Deterministic local path: parse(text) -> facts -> chips + pick(). Always available, always FREE.
+function readCaseLocal(text, hint, offlineNote) {
   if (!state.parseFn) { hint.textContent = "Parser unavailable; set the chips manually."; hint.classList.add("err"); return; }
 
   const f = state.parseFn(text);
@@ -240,7 +286,53 @@ function readCase() {
   const bits = [labelFor("time_band", f.time_band), labelFor("complexity", f.complexity)];
   if (f.procedures && f.procedures.length) bits.push(f.procedures.join(" + "));
   if (f.special_visit) bits.push("special visit");
-  hint.textContent = "Read: " + bits.join(" · ") + ". Adjust the chips if needed.";
+  hint.textContent = (offlineNote ? "Assistant offline — used the local engine. " : "") +
+    "Read: " + bits.join(" · ") + ". Adjust the chips if needed.";
+}
+
+function setLoading(on) {
+  state.loading = !!on;
+  const b = $("parse-btn");
+  if (!b) return;
+  b.disabled = !!on;
+  b.textContent = on ? "Asking your Claude…" : "Read the case";
+}
+
+// POST {case} to <url>/bill with the token; return the parsed answer object (the bridge's inner JSON).
+// The bridge returns {"answer":"<json string>"}; that string may be wrapped in ```json fences.
+async function callBridge(url, token, caseText) {
+  const base = String(url || "").replace(/\/+$/, ""); // defensive: never emit //bill
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), BRIDGE_TIMEOUT_MS);
+  try {
+    const r = await fetch(base + "/bill", {
+      method: "POST",
+      headers: { "content-type": "application/json", "X-Bridge-Token": token || "" },
+      body: JSON.stringify({ case: caseText }),
+      signal: ctrl.signal,
+    });
+    if (!r.ok) throw new Error("bridge HTTP " + r.status);
+    const data = await r.json();
+    const raw = (data && typeof data.answer === "string") ? data.answer
+              : (typeof data === "string" ? data : JSON.stringify(data));
+    return parseBridgeAnswer(raw);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Strip ```json ... ``` fences and parse. If the model wrapped the JSON in prose, fall back to the
+// first {...last} slice. Throws if nothing parses (caller then uses the local engine).
+function parseBridgeAnswer(raw) {
+  let t = String(raw || "").trim();
+  const fenced = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fenced) t = fenced[1].trim();
+  try { return JSON.parse(t); }
+  catch (e) {
+    const a = t.indexOf("{"), b = t.lastIndexOf("}");
+    if (a >= 0 && b > a) return JSON.parse(t.slice(a, b + 1));
+    throw e;
+  }
 }
 
 function labelFor(kind, id) {
@@ -310,6 +402,7 @@ function totalHtml(n) {
 
 function render(result, engine) {
   setBadge(engine === "engine" ? "grounded engine" : "local fallback", engine === "engine" ? "ok" : "info");
+  hideAsk(); // local engine never asks; clear any question left over from a bridge answer
 
   const items = [];
   if (result.assessment) items.push({ it: result.assessment, tag: tagFor(result.assessment) });
@@ -390,6 +483,97 @@ function tagFor(a) {
   if (a.prefix === "A") return "assessment (A)";
   return "assessment";
 }
+
+// ---- render: the assistant bridge answer (the user's own Claude) into the same hero card ----
+// Bridge shape: {assessment:{code,label,amount}, premiums:[{code,label,detail}],
+//                procedures:[{code,label,amount}], claim_line, warnings[], total, reasoning[], ask}
+// Defensive against missing/oddly-typed fields since this is model output.
+function renderBridge(answer) {
+  const a = (answer && typeof answer === "object") ? answer : {};
+  const assessment = (a.assessment && typeof a.assessment === "object") ? a.assessment : null;
+  const premiums = Array.isArray(a.premiums) ? a.premiums : [];
+  const procedures = Array.isArray(a.procedures) ? a.procedures : [];
+  const warnings = Array.isArray(a.warnings) ? a.warnings : [];
+  const reasoning = Array.isArray(a.reasoning) ? a.reasoning : [];
+  const total = (typeof a.total === "number") ? a.total : 0;
+  const claimLine = (typeof a.claim_line === "string") ? a.claim_line : "";
+  const ask = (typeof a.ask === "string" ? a.ask : "").trim();
+
+  setBadge("via your Claude", "ok");
+
+  // hero: assessment is the big code + amount; total is the answer's own total.
+  $("hero-code").textContent = (assessment && assessment.code) ? assessment.code : "—";
+  $("hero-label").textContent = (assessment && assessment.label) ? assessment.label : "No assessment code returned.";
+  $("hero-total").innerHTML = totalHtml(total);
+
+  // line items: assessment ($), premiums (the .detail string), procedures ($).
+  const ul = $("line-items");
+  ul.innerHTML = "";
+  if (assessment && assessment.code) {
+    ul.appendChild(bridgeRow(assessment.code, assessment.label, "assessment", money(assessment.amount), false));
+  }
+  premiums.forEach((p) => { p = p || {}; ul.appendChild(bridgeRow(p.code, p.label, "premium", p.detail || "", true)); });
+  procedures.forEach((p) => { p = p || {}; ul.appendChild(bridgeRow(p.code, p.label, "procedure", money(p.amount), false)); });
+
+  // warnings (amber callout inside the answer)
+  const wEl = $("hero-warnings");
+  wEl.innerHTML = "";
+  if (warnings.length) {
+    wEl.hidden = false;
+    warnings.forEach((w) => { const li = document.createElement("li"); li.textContent = w; wEl.appendChild(li); });
+  } else { wEl.hidden = true; }
+
+  // no per-line "* unconfirmed" flagging on the bridge path
+  $("hero-unconfirmed").hidden = true;
+  $("hero-unconfirmed").textContent = "";
+
+  // claim line (Copy + exports read state below)
+  $("claim-line").textContent = claimLine || "—";
+
+  // a clarifying question, shown prominently, only when the bridge asked one
+  if (ask) showAsk(ask); else hideAsk();
+
+  // note
+  const n = (assessment && assessment.code ? 1 : 0) + premiums.length + procedures.length;
+  $("hero-note").textContent = n ? `${n} code${n > 1 ? "s" : ""}` : "";
+
+  // why (reasoning)
+  const why = $("why");
+  why.innerHTML = "";
+  reasoning.forEach((line) => { const li = document.createElement("li"); li.textContent = line; why.appendChild(li); });
+  $("why-wrap").style.display = reasoning.length ? "" : "none";
+
+  // the bridge returns no source URLs; hide the Sources disclosure for this answer.
+  $("sources").innerHTML = "";
+  $("sources-wrap").style.display = "none";
+
+  // keep Copy + exports working: normalize into the pick() shape buildClaim understands.
+  const norm = {
+    assessment: assessment, premiums: premiums, procedures: procedures,
+    claim_line: claimLine, total: total, warnings: warnings, reasoning: reasoning,
+    has_unconfirmed: false,
+  };
+  state.lastResult = norm;
+  const today = new Date().toISOString().slice(0, 10);
+  state.lastClaim = state.buildClaim
+    ? state.buildClaim(norm, { ohip: getOhip(), group: getGroup(), date: today })
+    : null;
+}
+
+function bridgeRow(code, label, tag, amountText, isDetail) {
+  const li = document.createElement("li");
+  const c = document.createElement("span"); c.className = "li-code"; c.textContent = code || "—";
+  const lab = document.createElement("span"); lab.className = "li-lab"; lab.textContent = label || "";
+  const t = document.createElement("span"); t.className = "li-tag"; t.textContent = tag; lab.appendChild(t);
+  const amt = document.createElement("span");
+  amt.className = "li-amt" + (isDetail ? " percent" : ""); // detail strings styled like percent premiums
+  amt.textContent = amountText || "";
+  li.appendChild(c); li.appendChild(lab); li.appendChild(amt);
+  return li;
+}
+
+function showAsk(text) { const el = $("bridge-ask"); if (!el) return; el.textContent = text; el.hidden = false; }
+function hideAsk() { const el = $("bridge-ask"); if (!el) return; el.hidden = true; el.textContent = ""; }
 
 // ---- copy + export ----
 function wireExport() {

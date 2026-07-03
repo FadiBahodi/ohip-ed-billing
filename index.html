@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>What do I bill? — OHIP ED code advisor</title>
-  <meta name="description" content="OHIP emergency department code advisor. Grounded in the live Schedule of Benefits, not hallucinated. A code advisor, not a submitter. Runs entirely in your browser — no accounts, no network, no data leaves the page." />
+  <meta name="description" content="OHIP emergency department code advisor for THP Credit Valley. Grounded in the live Schedule of Benefits, not hallucinated. A code advisor, not a submitter." />
   <meta name="theme-color" content="#0e1a22" />
   <!-- empty icon: prevents a /favicon.ico 404, no network -->
   <link rel="icon" href="data:," />
@@ -14,7 +14,7 @@
   <main class="wrap">
     <header class="masthead">
       <h1>What do I bill?</h1>
-      <p class="sub">OHIP ED code advisor · a code advisor, not a submitter</p>
+      <p class="sub">OHIP ED code advisor · THP Credit Valley · a code advisor, not a submitter</p>
     </header>
 
     <!-- THE ANSWER (hero). id="output" is the live result region. -->
@@ -31,6 +31,9 @@
         </div>
         <span id="hero-total" class="hero-total">$0<span class="cents">.00</span></span>
       </div>
+
+      <!-- clarifying question from the assistant bridge (only when it needs one). -->
+      <p id="bridge-ask" class="bridge-ask" role="status" hidden></p>
 
       <ul id="hero-warnings" class="hero-warnings" role="alert" hidden></ul>
 
@@ -85,13 +88,15 @@
       </div>
     </section>
 
-    <!-- SETTINGS: your billing numbers. Stored ONLY in this browser (localStorage). Never sent anywhere. -->
+    <!-- SETTINGS: your billing numbers + optional assistant bridge. Stored ONLY in this browser
+         (localStorage). The billing numbers never leave the page; the bridge URL/token are used only
+         to POST the case to YOUR own local `claude -p` bridge when you set them. -->
     <details class="disclose" id="settings-wrap">
       <summary>Settings — your billing numbers</summary>
       <div class="disclose-body">
         <p class="settings-note">Enter these once. They are saved only in <strong>this browser</strong>
-          (localStorage) and are used to fill the claim header, CSV, and FHIR export. Nothing is sent
-          anywhere — this page has no server and makes no network calls.</p>
+          (localStorage) and fill the claim header, CSV, and FHIR export. Nothing leaves the page unless
+          you set the assistant bridge below.</p>
         <div class="settings-grid">
           <label class="settings-field">
             <span class="field-label">OHIP billing #</span>
@@ -103,7 +108,18 @@
             <input id="set-group" class="search" type="text"
               autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. 0000" />
           </label>
+          <label class="settings-field">
+            <span class="field-label">Assistant bridge URL</span>
+            <input id="set-bridge-url" class="search" type="url"
+              autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…trycloudflare.com" />
+          </label>
+          <label class="settings-field">
+            <span class="field-label">Bridge token</span>
+            <input id="set-bridge-token" class="search" type="text"
+              autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste the token" />
+          </label>
         </div>
+        <p class="settings-hint">Run bridge/START.sh on your Mac, paste the URL + token here. Uses your Claude, free. Leave blank to use the local engine.</p>
         <div class="row">
           <button id="settings-clear" class="btn ghost" type="button">Clear</button>
           <span id="settings-status" class="hint">Until set, the claim header shows “OHIP# —”.</span>
@@ -125,7 +141,7 @@
     <footer class="foot" id="data-note">
       Grounded in the live OHIP Schedule of Benefits + EM London + DoctorCare QRG. Every code cites a source.
       Amounts marked * are unconfirmed against the current SOB. This produces the code + claim line you type into
-      Epic Charge Capture or hand to the biller. It does not submit to the MOH. Runs fully in your browser.
+      Epic Charge Capture or hand to the biller. It does not submit to the MOH.
     </footer>
   </main>
 
