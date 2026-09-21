@@ -4,7 +4,12 @@ const D = FASTBILL_DATA,
   V = BillingEngine,
   T = FastTime,
   C = FolioCore,
-  A = FolioAssist;
+  A = FolioAssist,
+  PROFILE = window.FOLIO_SOURCES?.profile || {
+    id: "cvh-ed",
+    ecgInterpretation: false,
+    assessmentDefault: "multisystem",
+  };
 const $ = (s) => document.querySelector(s),
   $$ = (s) => [...document.querySelectorAll(s)];
 const E = (tag, attrs = {}, ...children) => {
@@ -135,7 +140,13 @@ $(".brand").onclick = (e) => {
   navigate("build");
 };
 function context() {
-  return { ...state.ctx, encounterId: state.id, note: $("#note").value };
+  return {
+    ecgAllowed: PROFILE.ecgInterpretation,
+    defaultAssessment: PROFILE.assessmentDefault,
+    ...state.ctx,
+    encounterId: state.id,
+    note: $("#note").value,
+  };
 }
 function remember() {
   if ($("#note").value.trim() || state.manual.length)
@@ -246,7 +257,7 @@ function updateAI(update) {
         ? "Local AI · " + Math.round(state.ai.progress * 100) + "%"
         : "Loading local AI…"
       : status === "thinking"
-        ? "Reading the encounter…"
+        ? state.ai.message || "Reading the encounter…"
         : status === "ready"
           ? "Local AI ready"
           : status === "error"
@@ -268,6 +279,7 @@ function scheduleSemantic() {
     interpreter.analyze(
       state.requestNote,
       D.services.map((x) => ({ id: x.id, label: x.label })),
+      A.serviceSeeds(state.requestNote, context(), D),
     );
   }, 700);
 }
@@ -321,7 +333,7 @@ function applyItems() {
   const v = V.validateCodes(r.items, D, {
     role:
       state.facts?.role === "procedure_only" ? "operator" : state.facts?.role,
-    ecgAllowed: false,
+    ecgAllowed: PROFILE.ecgInterpretation,
   });
   r.blockers = [...new Set([...r.blockers, ...v.errors])];
   r.warnings = [...new Set([...r.warnings, ...v.warnings])];
@@ -342,6 +354,8 @@ $("#note").oninput = () => {
   state.reviewed = false;
   state.savedOnly = false;
   state.semantic = null;
+  state.ctx.careConfirmed = false;
+  delete state.ctx.careEpisodes;
   interpreter?.cancel();
   clearTimeout(semanticTimer);
   clearTimeout(liveTimer);
@@ -385,6 +399,8 @@ $("#clear-note").onclick = () => {
         state.result = null;
         state.base = null;
         state.ctx.overrides = {};
+        delete state.ctx.careEpisodes;
+        state.ctx.careConfirmed = false;
         state.manual = [];
         state.removed = [];
         state.dirty = false;
@@ -679,51 +695,205 @@ function assessmentChoices() {
   );
   return choices;
 }
-function criticalOption(opportunity) {
-  const tier = opportunity.pathway === "critical_life" ? "life" : "other";
-  const input = E("input", {
-    placeholder: "e.g. 16:10–16:25; 16:40–16:50",
-    "aria-label": "Resuscitation intervals",
-  });
-  const preview = E("p", {
-    class: "code-preview",
-    text: tier === "life" ? "G521 → G523 → G522" : "G395 → G391",
-  });
-  input.oninput = () => {
-    const ranges = T.ranges(input.value, state.facts.date, { assume24: true });
-    preview.textContent = ranges.items.length
-      ? C.line(V.criticalUnits(ranges.total, tier)) +
-        " · " +
-        ranges.total +
-        " min"
-      : "Enter the care intervals to calculate units.";
+function editCareTimeline() {
+  const plan = state.facts.carePlan;
+  const rows = (plan?.episodes || []).map((e) => ({ ...e }));
+  const list = E("div", { class: "care-editor" });
+  const draw = () => {
+    list.replaceChildren(
+      ...rows.map((e, i) =>
+        E(
+          "div",
+          { class: "care-edit-row" },
+          E("input", {
+            value: e.label,
+            "aria-label": "Episode " + (i + 1),
+            onchange: (x) => (e.label = x.target.value),
+          }),
+          E("input", {
+            type: "time",
+            value: e.start,
+            "aria-label": "Start " + (i + 1),
+            onchange: (x) => (e.start = x.target.value),
+          }),
+          E("input", {
+            type: "time",
+            value: e.end,
+            "aria-label": "End " + (i + 1),
+            onchange: (x) => (e.end = x.target.value),
+          }),
+          E(
+            "select",
+            {
+              "aria-label": "Type " + (i + 1),
+              onchange: (x) => (e.kind = x.target.value),
+            },
+            E("option", {
+              value: "care",
+              text: "Active care",
+              selected: e.kind === "care" ? "" : null,
+            }),
+            E("option", {
+              value: "excluded",
+              text: "Exclude",
+              selected: e.kind === "excluded" ? "" : null,
+            }),
+          ),
+          E("button", {
+            class: "text-button",
+            text: "Remove",
+            onclick: () => {
+              rows.splice(i, 1);
+              draw();
+            },
+          }),
+        ),
+      ),
+    );
   };
+  draw();
   modal(
-    "Critical-care option",
-    E("p", { text: opportunity.detail }),
-    E("label", { text: "Resuscitation intervals" }, input),
+    "Care timeline",
     E("p", {
-      class: "muted",
-      text: "Periods devoted to this patient’s resuscitation, excluding separately billed procedures and other patients.",
+      text: "Adjust the proposed blocks. Interruptions and separate procedures are subtracted automatically.",
     }),
-    preview,
+    list,
+    E("button", {
+      class: "text-button",
+      text: "+ Add a block",
+      onclick: () => {
+        const start = rows.at(-1)?.end || state.facts.time;
+        rows.push({
+          label: "Active care",
+          start,
+          end: start,
+          kind: "care",
+          quote: "",
+          timing: "confirmed",
+        });
+        draw();
+      },
+    }),
     E("button", {
       class: "button primary",
-      text: "Use this pathway",
+      text: "Use this timeline",
       onclick: () => {
-        const ranges = T.ranges(input.value, state.facts.date, {
-          assume24: true,
-        });
-        if (!ranges.items.length || ranges.errors.length)
-          return toast("Enter valid care intervals.");
-        Object.assign(state.ctx.overrides, {
-          criticalTier: tier,
-          intervals: input.value,
-          exclusive: true,
-        });
+        if (rows.some((e) => !e.start || !e.end || e.start === e.end))
+          return toast("Each block needs a start and a later end.");
+        state.ctx.careEpisodes = rows;
+        state.ctx.careConfirmed = true;
+        state.ctx.overrides.exclusive = true;
+        state.ctx.overrides.criticalTier = plan.tier;
         $("#modal").close();
         build({ requestAI: false });
       },
+    }),
+  );
+}
+function carePanel() {
+  const p = state.facts?.carePlan;
+  if (!p?.minutes) return null;
+  return E(
+    "section",
+    { class: "care-panel", "aria-label": "Care reconstruction" },
+    E(
+      "div",
+      { class: "care-heading" },
+      E("strong", { text: p.minutes + " min active care" }),
+      E("span", {
+        class: "tag " + (p.basis === "estimated" ? "amber" : "blue"),
+        text:
+          p.basis === "estimated"
+            ? "Estimated timeline"
+            : p.confirmed
+              ? "Times confirmed"
+              : "Times from note",
+      }),
+    ),
+    E("p", { text: p.reason }),
+    E(
+      "div",
+      { class: "care-timeline" },
+      p.episodes.map((e) =>
+        E(
+          "div",
+          { class: "care-episode " + e.kind },
+          E("span", { class: "care-clock", text: e.start + "–" + e.end }),
+          E("span", { text: e.label }),
+          E("small", {
+            text:
+              e.kind === "excluded"
+                ? "Excluded"
+                : e.timing === "estimated"
+                  ? "Estimated"
+                  : "",
+          }),
+        ),
+      ),
+    ),
+    p.excludedMinutes
+      ? E("p", {
+          class: "care-note",
+          text:
+            p.excludedMinutes +
+            " min removed · overlapping blocks counted once",
+        })
+      : null,
+    p.basis === "estimated"
+      ? E("p", {
+          class: "care-note",
+          text: "Suggested active-care time from the work described. Adjust it to match your care.",
+        })
+      : null,
+    E(
+      "div",
+      { class: "care-actions" },
+      !p.confirmed
+        ? E("button", {
+            class: "button primary",
+            text: "These times fit my care",
+            onclick: () => {
+              // Keep the confirmed clocks fixed if the encounter clock changes.
+              state.ctx.careEpisodes = p.episodes.map((e) => ({ ...e }));
+              state.ctx.careConfirmed = true;
+              build({ requestAI: false });
+            },
+          })
+        : null,
+      E("button", {
+        class: "text-button",
+        text: "Adjust timeline",
+        onclick: editCareTimeline,
+      }),
+      E("button", {
+        class: "text-button",
+        text: "Use assessment instead",
+        onclick: () => {
+          state.ctx.overrides.criticalTier = "none";
+          build({ requestAI: false });
+        },
+      }),
+    ),
+  );
+}
+function documentationPanel() {
+  const text = FolioCare.documentation(state.facts);
+  if (!text) return null;
+  const area = E("textarea", {
+    class: "documentation-draft",
+    value: text,
+    "aria-label": "Suggested chart wording",
+  });
+  return E(
+    "details",
+    { class: "documentation-panel" },
+    E("summary", { text: "Suggested chart wording" }),
+    E("p", { text: "Edit this draft to match the work you performed." }),
+    area,
+    E("button", {
+      class: "text-button",
+      text: "Copy wording",
+      onclick: () => copyText(area.value, "Chart wording copied."),
     }),
   );
 }
@@ -780,9 +950,16 @@ function render() {
     box.append(
       E("div", {
         class: "source-note",
-        text: "Saved codes. Paste the note to reinterpret this encounter.",
+        text:
+          "Saved codes" +
+          (r.criticalProposed ? " · timing remains proposed" : "") +
+          ". Paste the note to reinterpret this encounter.",
       }),
     );
+  if (!state.savedOnly) {
+    const care = carePanel();
+    if (care) box.append(care);
+  }
   for (const [i, x] of r.items.entries()) {
     const c = D.codes.find((c) => c.code === x.code),
       isAssessment =
@@ -806,13 +983,17 @@ function render() {
           E("small", {
             text: isAssessment
               ? f.assessment.reason || "Matched to the encounter and time band."
-              : x.timeUnits
-                ? x.timeUnits + " time units"
-                : x.units > 1
-                  ? x.units + " units"
-                  : x.manual
-                    ? "Added by you"
-                    : x.reason || "Saved draft",
+              : r.critical && /^G(?:521|523|522|395|391)$/.test(x.code)
+                ? r.criticalTimeBasis === "estimated"
+                  ? "From the proposed care timeline"
+                  : "From the care timeline"
+                : x.timeUnits
+                  ? x.timeUnits + " time units"
+                  : x.units > 1
+                    ? x.units + " units"
+                    : x.manual
+                      ? "Added by you"
+                      : x.reason || "Saved draft",
           }),
         ),
         E("button", {
@@ -905,8 +1086,12 @@ function render() {
           o.pathway?.startsWith("critical_") && !r.critical
             ? E("button", {
                 class: "text-button",
-                text: "Build this option →",
-                onclick: () => criticalOption(o),
+                text: "Use care option →",
+                onclick: () => {
+                  state.ctx.overrides.criticalTier =
+                    o.pathway === "critical_life" ? "life" : "other";
+                  build({ requestAI: false });
+                },
               })
             : null,
           o.question
@@ -922,6 +1107,10 @@ function render() {
         ),
       );
     box.append(area);
+  }
+  if (!state.savedOnly) {
+    const doc = documentationPanel();
+    if (doc) box.append(doc);
   }
   const evidence = E(
     "details",
@@ -1044,6 +1233,9 @@ function saveEncounter() {
         timeUnits: x.timeUnits,
       })),
       criticalMinutes: r.criticalMinutes,
+      ruleVersion: window.FOLIO_SOURCES?.version,
+      criticalTimeBasis: r.criticalTimeBasis,
+      criticalProposed: r.criticalProposed,
       criticalIntervals: r.criticalIntervals || [],
       periodKey: r.period?.key,
       specialVisit: !!r.period?.patientCode,
@@ -1171,7 +1363,7 @@ function openEncounter(id) {
     };
     const v = V.validateCodes(row.codes, D, {
       role: row.role,
-      ecgAllowed: false,
+      ecgAllowed: PROFILE.ecgInterpretation,
     });
     state.result = {
       items: row.codes,
@@ -1189,6 +1381,8 @@ function openEncounter(id) {
       excluded: [],
       opportunities: [],
       criticalMinutes: row.criticalMinutes,
+      criticalTimeBasis: row.criticalTimeBasis,
+      criticalProposed: row.criticalProposed,
       criticalIntervals: row.criticalIntervals,
     };
   }
@@ -1285,7 +1479,11 @@ function renderShift() {
           {},
           E("span", {
             class: "tag " + (r.reviewed ? "blue" : "amber"),
-            text: r.reviewed ? "Reviewed draft" : "Hold",
+            text: r.criticalProposed
+              ? "Proposed timing"
+              : r.reviewed
+                ? "Reviewed draft"
+                : "Draft",
           }),
         ),
         E(
@@ -1354,6 +1552,32 @@ function sourceNodes(ids) {
     );
   });
 }
+function guidanceNodes(ruleId) {
+  const bundle = window.FOLIO_SOURCES;
+  if (!bundle) return [];
+  const keys = ruleId
+    ? bundle.ruleEvidence[ruleId] || []
+    : bundle.sources.map((s) => s.key);
+  return keys.map((key) => {
+    const s = bundle.sources.find((s) => s.key === key);
+    return E(
+      "div",
+      { class: "source" },
+      E("strong", { text: s.title }),
+      E("p", { text: s.summary }),
+      E("blockquote", { text: s.quote }),
+      E("a", {
+        href: s.url,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        text: "Read Ontario guidance ↗",
+      }),
+      E("small", {
+        text: "Checked " + s.checkedOn + " · " + s.locator + " · " + s.unitId,
+      }),
+    );
+  });
+}
 function ruleNode(id) {
   const r = D.rules.find((x) => x.id === id);
   if (!r) return E("p", { text: id });
@@ -1366,6 +1590,7 @@ function ruleNode(id) {
       text: r.id + " · " + r.review_status.replaceAll("_", " "),
     }),
     E("p", { text: r.body }),
+    ...guidanceNodes(r.id),
     ...sourceNodes(r.source_ids || []),
   );
 }
@@ -1388,6 +1613,8 @@ function showSources() {
     E("p", {
       text: "No current dollar fees are bundled. The app does not estimate revenue or submit claims. The ECG profile is currently set to CVH (G313 disabled). Source and effective-date details are preserved on each rule.",
     }),
+    E("p", { text: window.FOLIO_SOURCES?.coverage || "" }),
+    ...guidanceNodes(),
     ...sourceNodes(D.sources.map((x) => x.id)),
   );
 }
@@ -1397,7 +1624,7 @@ function privacy() {
   modal(
     "Storage & privacy",
     E("p", {
-      text: "Clinical text is interpreted on this device. A Qwen3 4B model runs in a background browser worker; notes are never sent to a billing server, analytics service or AI provider. The first use downloads model files from Hugging Face and the WebLLM project, then caches them in this browser. Local AI requires WebGPU; immediate billing suggestions remain available while it loads or if it is unavailable.",
+      text: "Clinical text is interpreted on this device. A Qwen3.5 4B model runs in a background browser worker; notes are never sent to a billing server, analytics service or AI provider. The first use downloads model files from Hugging Face and the WebLLM project, then caches them in this browser. Local AI requires WebGPU; immediate billing suggestions remain available while it loads or if it is unavailable.",
     }),
     E("h3", { text: "Only in this tab" }),
     E("p", {
@@ -1625,10 +1852,10 @@ $$("[data-search]").forEach(
       search();
     }),
 );
-async function copyText(t) {
+async function copyText(t, message = "Draft codes copied.") {
   try {
     await navigator.clipboard.writeText(t);
-    toast("Draft codes copied.");
+    toast(message);
   } catch {
     const area = E("textarea", { readonly: "", value: t });
     modal(
@@ -1881,7 +2108,7 @@ $("#ai-status").onclick = () =>
           : ""),
     }),
     E("p", {
-      text: "Qwen3 4B runs in a background worker on your device. The first use downloads its model files; later visits use the browser cache. Your note is never sent to a model provider.",
+      text: "Qwen3.5 4B runs in a background worker on your device. The first use downloads its model files; later visits use the browser cache. Your note is never sent to a model provider.",
     }),
     E("button", {
       class: "button primary",

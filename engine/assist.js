@@ -7,10 +7,13 @@
     typeof module === "object" && module.exports
       ? require("./time.js")
       : root.FastTime,
+    typeof module === "object" && module.exports
+      ? require("./care.js")
+      : root.FolioCare,
   );
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.FolioAssist = api;
-})(globalThis, function (F, T) {
+})(globalThis, function (F, T, Care) {
   "use strict";
   function clock(now = new Date()) {
     const parts = Object.fromEntries(
@@ -105,6 +108,7 @@
       (suggestedLevel === "minor" && focusedProcedure);
     if (
       suggestedLevel === "none" &&
+      (!interpretation?.care || interpretation.care.tier === "none") &&
       !ctx.role &&
       !explicit &&
       interpretation.services.some(
@@ -122,7 +126,11 @@
         ? { 1: "minor", 2: "comprehensive", 3: "multisystem" }[literal[1]]
         : useModelDescriptor
           ? suggestedLevel
-          : "multisystem";
+          : ["minor", "multisystem", "comprehensive"].includes(
+                ctx.defaultAssessment,
+              )
+            ? ctx.defaultAssessment
+            : "multisystem";
       f.assessment = {
         level,
         evidence: interpretation?.assessment?.quote || "",
@@ -160,9 +168,27 @@
       ];
       f.critical.reason = criticalOpportunity.detail;
     }
+    for (const r of interpretation?.reassessments || []) {
+      const existing = f.reassessments.find((x) => x.time === r.time);
+      const event = {
+        time: r.time,
+        date: f.date,
+        evidence: r.quote,
+        newOrder: !!existing?.newOrder || r.newCare,
+        notDisposition: !!existing?.notDisposition || !r.dispositionOnly,
+        reason: r.reason,
+        origin: "model",
+      };
+      if (existing) Object.assign(existing, event);
+      else f.reassessments.push(event);
+    }
     f.assumptions = assumptions;
     f.interpretation = interpretation;
-    return { facts: F.applyOverrides(f, ctx), interpretation, assumptions };
+    return {
+      facts: Care.apply(F.applyOverrides(f, ctx), interpretation, ctx, note),
+      interpretation,
+      assumptions,
+    };
   }
   function validate(value, note, data) {
     const errors = [];
@@ -190,7 +216,7 @@
       }
       return obj[key];
     };
-    const work = arr("work", 12).map((w) => {
+    const work = arr("work", 1000).map((w) => {
       if (
         typeof w.label !== "string" ||
         w.label.length > 180 ||
@@ -200,7 +226,7 @@
         errors.push("Work needs an exact quote and a stated certainty.");
       return { label: w.label, quote: w.quote, certainty: w.certainty };
     });
-    const services = arr("services", 15).map((e) => {
+    const services = arr("services", 1000).map((e) => {
       if (
         !data.services.some((s) => s.id === e.service) ||
         !["self", "other", "nurse", "unknown"].includes(e.actor) ||
@@ -214,6 +240,8 @@
       for (const key of ["site", "anaesthesia", "purpose"])
         if (typeof e[key] === "string" && e[key] && e[key] !== "unknown")
           attrs[key] = e[key];
+      if (attrs.site)
+        attrs.site = F.siteFrom(attrs.site, e.service) || attrs.site;
       if (e.length_cm > 0 && e.length_cm <= 200) {
         if (
           !new RegExp(
@@ -231,7 +259,7 @@
         attrs,
       };
     });
-    const opportunities = arr("opportunities", 5).map((o) => {
+    const opportunities = arr("opportunities", 1000).map((o) => {
       if (
         typeof o.title !== "string" ||
         o.title.length > 150 ||
@@ -255,6 +283,60 @@
           : "other",
       };
     });
+    const reassessments = [];
+    for (const r of obj.reassessments || []) {
+      if (
+        !F.proof(note, r.quote) ||
+        typeof r.reason !== "string" ||
+        r.reason.length > 600 ||
+        typeof r.newCare !== "boolean" ||
+        typeof r.dispositionOnly !== "boolean"
+      ) {
+        errors.push("Reassessment needs grounded work.");
+        continue;
+      }
+      if (
+        !/^([01]\d|2[0-3]):[0-5]\d$/.test(r.time) ||
+        !T.tokens(note, { assume24: true }).some((t) => t.time === r.time)
+      )
+        continue;
+      reassessments.push({ ...r });
+    }
+    let care = null;
+    if (obj.care) {
+      const c = obj.care;
+      if (
+        !["none", "other", "life"].includes(c.tier) ||
+        typeof c.reason !== "string" ||
+        !F.proof(note, c.quote) ||
+        !Array.isArray(c.episodes) ||
+        c.episodes.length > 1000
+      )
+        errors.push("Invalid care reconstruction.");
+      else {
+        for (const e of c.episodes) {
+          if (
+            !F.proof(note, e.quote) ||
+            typeof e.label !== "string" ||
+            e.label.length > 300 ||
+            !["care", "excluded"].includes(e.kind) ||
+            !["documented", "estimated"].includes(e.timing) ||
+            !Number.isInteger(e.minutes) ||
+            e.minutes < 0 ||
+            e.minutes > 720 ||
+            typeof e.start !== "string" ||
+            typeof e.end !== "string"
+          )
+            errors.push("Care episode needs grounded work and valid timing.");
+        }
+        care = {
+          tier: c.tier,
+          reason: c.reason,
+          quote: c.quote,
+          episodes: c.tier === "none" ? [] : c.episodes.map((e) => ({ ...e })),
+        };
+      }
+    }
     return {
       ok: !errors.length,
       errors,
@@ -266,9 +348,51 @@
         },
         work,
         services,
-        opportunities,
+        opportunities: opportunities.filter(
+          (o) =>
+            !(
+              o.pathway === "documentation" &&
+              services.some(
+                (e) =>
+                  ["other", "nurse"].includes(e.actor) && e.quote === o.quote,
+              )
+            ),
+        ),
+        care,
+        reassessments,
       },
     };
   }
-  return { clock, suggest, validate };
+  function serviceSeeds(note, ctx, data) {
+    const f = F.localExtract(note, ctx, data);
+    const seeds = f.events.map((e) => ({
+      service: e.service,
+      actor: e.actor,
+      status: e.status,
+      quote: e.evidence,
+      site: e.attrs.site || "unknown",
+      anaesthesia: e.attrs.anaesthesia || "unknown",
+      purpose: e.attrs.purpose || "unknown",
+      length_cm: e.attrs.length_cm || 0,
+    }));
+    if (f.role === "sedation")
+      for (const service of [
+        "fracture_reduction",
+        "dislocation",
+        "cardioversion",
+      ])
+        if (!seeds.some((s) => s.service === service))
+          seeds.push({
+            service,
+            actor: "unknown",
+            status: "performed",
+            quote: note,
+            site: F.siteFrom(note, service) || "unknown",
+            anaesthesia: "sedation",
+            purpose: "unknown",
+            length_cm: 0,
+          });
+    return seeds;
+  }
+  return { clock, suggest, validate, serviceSeeds };
 });

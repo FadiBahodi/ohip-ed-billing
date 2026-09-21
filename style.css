@@ -1876,3 +1876,26 @@ h1 {
     min-height: 180px;
   }
 }
+
+/* The bill and its reconstructed care stay together. */
+.care-panel { margin: 0 24px 16px; padding: 20px; background: #f8faff; border: 1px solid #dce3fb; border-radius: 14px; }
+.care-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.care-heading > strong { font-size: 22px; letter-spacing: -.6px; }
+.care-panel > p { margin: 10px 0 16px; font-size: 14px; color: #546179; line-height: 1.5; }
+.care-timeline { display: grid; gap: 0; }
+.care-episode { display: grid; grid-template-columns: 112px 1fr auto; align-items: baseline; gap: 12px; padding: 10px 0; border-top: 1px solid #e5eaf6; font-size: 13px; line-height: 1.45; }
+.care-clock { font-variant-numeric: tabular-nums; font-weight: 600; color: #344fc4; }
+.care-episode.excluded { color: #798294; }
+.care-episode.excluded .care-clock { color: #798294; }
+.care-episode small { font-size: 11px; color: #7a8498; }
+.care-actions { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.care-actions .button { padding: 10px 14px; font-size: 13px; }
+.care-actions .text-button { font-size: 13px; }
+.care-panel .care-note { font-size: 12px; margin: 10px 0; }
+.care-edit-row { display: grid; grid-template-columns: minmax(140px,1fr) 105px 105px 110px auto; gap: 8px; margin: 10px 0; }
+.care-edit-row input,.care-edit-row select { min-width: 0; width: 100%; padding: 8px; border: 1px solid #dce3ef; border-radius: 7px; }
+.documentation-panel { padding: 18px 24px; border-top: 1px solid var(--line); }
+.documentation-panel summary { cursor: pointer; color: #354057; font-weight: 600; font-size: 14px; }
+.documentation-panel p { color: #798294; font-size: 13px; }
+.documentation-draft { width: 100%; min-height: 210px; padding: 14px; margin: 10px 0; font: inherit; font-size: 13px; line-height: 1.65; border: 1px solid #dce3ef; border-radius: 10px; resize: vertical; }
+@media(max-width:600px) { .care-panel { margin: 0 14px 14px; padding: 15px; } .care-episode { grid-template-columns: 100px 1fr; } .care-episode small { grid-column:2; } .care-edit-row { grid-template-columns: 1fr 1fr; padding: 12px 0; border-bottom:1px solid #eee; } .care-edit-row input:first-child { grid-column:1/-1; } }

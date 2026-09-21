@@ -1,0 +1,885 @@
+[
+  {
+    "file": "initial/Qwen3-4B-q4f16_1-MLC.json",
+    "model": "Qwen3-4B-q4f16_1-MLC",
+    "passed": 3,
+    "total": 8,
+    "minSeconds": 8.3,
+    "maxSeconds": 28.7,
+    "medianSeconds": 22.1,
+    "cases": [
+      {
+        "id": "sparse",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 8.3,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "colloquial-repair",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 9.6,
+        "codes": "H101 + Z176",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "shock-estimate",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": false,
+          "requiredServices": true,
+          "noUnsupportedProcedure": false,
+          "proposedTime": false
+        },
+        "seconds": 22.1,
+        "codes": "G269",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "interrupted-resus",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": false,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "minutes": false
+        },
+        "seconds": 23.8,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "respiratory",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": false,
+          "requiredServices": true,
+          "noUnsupportedProcedure": false,
+          "minutes": true
+        },
+        "seconds": 28.7,
+        "codes": "G521 + G523 + G522 + H112",
+        "criticalMinutes": 33,
+        "timeBasis": "documented",
+        "openQuestions": []
+      },
+      {
+        "id": "negative-procedure",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 10.3,
+        "codes": "H101",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "stable-long-stay",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": false
+        },
+        "seconds": 19.2,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": [
+          "events.pocus.attrs.indication",
+          "events.pocus.attrs.documentation"
+        ]
+      },
+      {
+        "id": "reassessment",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": false,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "reassessment": false
+        },
+        "seconds": 27.2,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      }
+    ]
+  },
+  {
+    "file": "initial/Qwen3.5-2B-q4f16_1-MLC.json",
+    "model": "Qwen3.5-2B-q4f16_1-MLC",
+    "passed": 5,
+    "total": 8,
+    "minSeconds": 3.7,
+    "maxSeconds": 17.4,
+    "medianSeconds": 5.7,
+    "cases": [
+      {
+        "id": "sparse",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 5.7,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "colloquial-repair",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 4.9,
+        "codes": "H101 + Z176",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "shock-estimate",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "proposedTime": false
+        },
+        "seconds": 9.6,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": [
+          "events.central_line.actor"
+        ]
+      },
+      {
+        "id": "interrupted-resus",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "minutes": false
+        },
+        "seconds": 7.4,
+        "codes": "G521 + G523 + G522 ×2",
+        "criticalMinutes": 55,
+        "timeBasis": "documented",
+        "openQuestions": []
+      },
+      {
+        "id": "respiratory",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "minutes": true
+        },
+        "seconds": 17.4,
+        "codes": "G521 + G523 + G522 + H112",
+        "criticalMinutes": 33,
+        "timeBasis": "documented",
+        "openQuestions": []
+      },
+      {
+        "id": "negative-procedure",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 4,
+        "codes": "H101",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "stable-long-stay",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 3.7,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "reassessment",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "reassessment": false
+        },
+        "seconds": 3.9,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      }
+    ]
+  },
+  {
+    "file": "initial/Qwen3.5-4B-q4f16_1-MLC.json",
+    "model": "Qwen3.5-4B-q4f16_1-MLC",
+    "passed": 3,
+    "total": 8,
+    "minSeconds": 8.6,
+    "maxSeconds": 16.5,
+    "medianSeconds": 11.6,
+    "cases": [
+      {
+        "id": "sparse",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 8.6,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "colloquial-repair",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 8.7,
+        "codes": "H101 + Z176",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "shock-estimate",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "proposedTime": false
+        },
+        "seconds": 11.9,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": [
+          "events.central_line.actor"
+        ]
+      },
+      {
+        "id": "interrupted-resus",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": false,
+          "minutes": false
+        },
+        "seconds": 16.5,
+        "codes": "H103 + G270 + G379",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "respiratory",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": false,
+          "minutes": true
+        },
+        "seconds": 15.4,
+        "codes": "G521 + G523 + G522 + H112",
+        "criticalMinutes": 33,
+        "timeBasis": "documented",
+        "openQuestions": []
+      },
+      {
+        "id": "negative-procedure",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 8.8,
+        "codes": "H101",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "stable-long-stay",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": false
+        },
+        "seconds": 9.5,
+        "codes": "G379",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "reassessment",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "reassessment": false
+        },
+        "seconds": 11.6,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      }
+    ]
+  },
+  {
+    "file": "reconstruction-pass/Qwen3.5-2B-q4f16_1-MLC.json",
+    "model": "Qwen3.5-2B-q4f16_1-MLC",
+    "passed": 4,
+    "total": 8,
+    "minSeconds": 6.4,
+    "maxSeconds": 16.9,
+    "medianSeconds": 11.9,
+    "cases": [
+      {
+        "id": "sparse",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": false,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 8.6,
+        "codes": "G521 + G523",
+        "criticalMinutes": 18,
+        "timeBasis": "estimated",
+        "openQuestions": []
+      },
+      {
+        "id": "colloquial-repair",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 8.2,
+        "codes": "H101 + Z176",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "shock-estimate",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": false,
+          "proposedTime": true
+        },
+        "seconds": 16.9,
+        "codes": "G521 + G523 + G522 ×8",
+        "criticalMinutes": 150,
+        "timeBasis": "estimated",
+        "openQuestions": [
+          "events.nerve_block.attrs.exact_code"
+        ]
+      },
+      {
+        "id": "interrupted-resus",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "minutes": false
+        },
+        "seconds": 12.6,
+        "codes": "G521 + G523 + G522 ×2",
+        "criticalMinutes": 55,
+        "timeBasis": "documented",
+        "openQuestions": []
+      },
+      {
+        "id": "respiratory",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "minutes": true
+        },
+        "seconds": 14.2,
+        "codes": "G521 + G523 + G522 + H112",
+        "criticalMinutes": 33,
+        "timeBasis": "documented",
+        "openQuestions": []
+      },
+      {
+        "id": "negative-procedure",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 6.4,
+        "codes": "H101",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "stable-long-stay",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 6.4,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "reassessment",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": false,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "reassessment": false
+        },
+        "seconds": 11.9,
+        "codes": "G395 + G391 ×12",
+        "criticalMinutes": 190,
+        "timeBasis": "estimated",
+        "openQuestions": []
+      }
+    ]
+  },
+  {
+    "file": "reconstruction-pass/Qwen3.5-4B-q4f16_1-MLC.json",
+    "model": "Qwen3.5-4B-q4f16_1-MLC",
+    "passed": 6,
+    "total": 8,
+    "minSeconds": 10,
+    "maxSeconds": 25.2,
+    "medianSeconds": 13.7,
+    "cases": [
+      {
+        "id": "sparse",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 10,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "colloquial-repair",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 11.2,
+        "codes": "H101 + Z176",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "shock-estimate",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "proposedTime": true
+        },
+        "seconds": 15.2,
+        "codes": "G521",
+        "criticalMinutes": 15,
+        "timeBasis": "estimated",
+        "openQuestions": []
+      },
+      {
+        "id": "interrupted-resus",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "minutes": true
+        },
+        "seconds": 22.3,
+        "codes": "G521 + G523 + G522",
+        "criticalMinutes": 45,
+        "timeBasis": "documented",
+        "openQuestions": []
+      },
+      {
+        "id": "respiratory",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": false,
+          "minutes": true
+        },
+        "seconds": 25.2,
+        "codes": "G521 + G523 + G522 + H112",
+        "criticalMinutes": 33,
+        "timeBasis": "documented",
+        "openQuestions": []
+      },
+      {
+        "id": "negative-procedure",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 13.1,
+        "codes": "H101",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "stable-long-stay",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 13.7,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "reassessment",
+        "passed": false,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": false,
+          "reassessment": false
+        },
+        "seconds": 13.2,
+        "codes": "H103 + G379",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      }
+    ]
+  },
+  {
+    "file": "Qwen3.5-4B-q4f16_1-MLC.json",
+    "model": "Qwen3.5-4B-q4f16_1-MLC",
+    "passed": 12,
+    "total": 12,
+    "minSeconds": 9.3,
+    "maxSeconds": 25.3,
+    "medianSeconds": 14.4,
+    "cases": [
+      {
+        "id": "sparse",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 9.5,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "colloquial-repair",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 12.1,
+        "codes": "H101 + Z176",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "shock-estimate",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "proposedTime": true
+        },
+        "seconds": 17.4,
+        "codes": "G521",
+        "criticalMinutes": 15,
+        "timeBasis": "estimated",
+        "openQuestions": []
+      },
+      {
+        "id": "interrupted-resus",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "minutes": true
+        },
+        "seconds": 21,
+        "codes": "G521 + G523 + G522",
+        "criticalMinutes": 45,
+        "timeBasis": "documented",
+        "openQuestions": []
+      },
+      {
+        "id": "respiratory",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "minutes": true
+        },
+        "seconds": 25.3,
+        "codes": "G521 + G523 + G522 + H112",
+        "criticalMinutes": 33,
+        "timeBasis": "documented",
+        "openQuestions": []
+      },
+      {
+        "id": "negative-procedure",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 13.5,
+        "codes": "H101",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "stable-long-stay",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 12.6,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "reassessment",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "reassessment": true
+        },
+        "seconds": 17.5,
+        "codes": "H103 + H104",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "pressor-shorthand",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true,
+          "minutes": true,
+          "proposedTime": true
+        },
+        "seconds": 14.4,
+        "codes": "G521 + G523",
+        "criticalMinutes": 20,
+        "timeBasis": "estimated",
+        "openQuestions": []
+      },
+      {
+        "id": "waiting-for-ride",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 9.3,
+        "codes": "H103",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "face-repair",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 12.1,
+        "codes": "H131 + Z154 + E412",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": []
+      },
+      {
+        "id": "sedation-role",
+        "passed": true,
+        "checks": {
+          "structure": true,
+          "tier": true,
+          "requiredServices": true,
+          "noUnsupportedProcedure": true
+        },
+        "seconds": 17.5,
+        "codes": "",
+        "criticalMinutes": null,
+        "timeBasis": null,
+        "openQuestions": [
+          "sedationCode"
+        ]
+      }
+    ]
+  }
+]

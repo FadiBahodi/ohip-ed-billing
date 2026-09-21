@@ -8,7 +8,7 @@ Type an encounter and get a proposed bill automatically. Today and now are the d
 
 ## Run
 
-The static app includes its compiled scripts, styles and fonts. No install is needed to serve it. Local AI requires a WebGPU-capable browser and downloads Qwen3 4B model assets on first use (the WebLLM registry estimates about 3.4 GB of GPU memory). Later visits reuse the browser's model cache. The immediate draft does not wait for the model.
+The static app includes its compiled scripts, styles and fonts. No install is needed to serve it. Local AI requires a WebGPU-capable browser and downloads Qwen3.5 4B model assets on first use (the WebLLM registry estimates about 3.9 GB of GPU memory). Later visits reuse the browser's model cache. The immediate draft does not wait for the model.
 
 ```sh
 npm start
@@ -26,11 +26,14 @@ GitHub Pages serves the root of `main`. Asset URLs are relative so the app works
 ## What is connected
 
 - Immediate suggestions while typing, with Toronto date/time defaults, explicit note timing and clinician corrections taking precedence.
-- Qwen3 4B inference through WebLLM in a background worker. Its structured interpretation covers assessment, recognized work, catalogue procedures, provider roles, status and additional capture opportunities.
+- Qwen3.5 4B inference through WebLLM in a background worker. Its structured interpretation covers assessment, recognized work, catalogue procedures, provider roles, status, care episodes and additional capture opportunities. Short independent checks resolve procedure attribution and repeat assessments.
 - The FastBill v3 timeline and rule engines map recognized services to code combinations. Model output cannot create arbitrary fee codes. Evidence quotations and explicit measurements are checked before interpretation is applied.
 - Local search across the supplied catalogue, service aliases and rules.
 - The working ED descriptor is retained for sparse chief complaints; model alternatives remain selectable. Focused procedures and explicit descriptors refine the default. One-click assessment changes, code/plain-language display, clinician-added lines and units, and combination checks. Material missing details refine the draft; date/time/descriptor questions no longer gate the initial suggestion. Copy and Save do not require a review checkbox.
-- Shift drafts stored in this browser, with reviewed/hold status and cross-encounter critical-time checks.
+- Automatic critical-care proposals: note intervals, active-work estimates, interruption subtraction, overlap merging, unit calculations and a prefilled editable timeline. The model does not wait for the literal words “critical care”.
+- Suggested chart wording from the recognized work and timeline. Recorded, estimated and physician-confirmed timing remain distinct through storage, CSV and restore.
+- Automatic substantive reassessments with explicit time and further care, checked against the working package's spacing rule. Current coverage still requires review.
+- Shift drafts stored in this browser, with timing provenance, rule-package version and cross-encounter critical-time checks.
 - JSON backup/restore, CSV with formula-injection protection, and print/PDF.
 
 ## Data handling
@@ -45,14 +48,26 @@ The AI status shows loading, interpretation, readiness or failure. Unsupported b
 
 This is **draft decision support**, not a verified current OHIP fee schedule or submission system. The supplied FastBill package was built on 2026-09-04 and explicitly marks current-schedule verification as incomplete. Dollar fees are not bundled. Some mappings need a current-preamble check; those statuses and original source links remain visible.
 
-The ECG profile is currently CVH-oriented (`G313` disabled). Suggestions distinguish explicit and inferred work; inferred work is a proposal for the physician, not an automatically completed chart statement. Duration alone is not converted into critical-care minutes. Procedure time defaults to encounter time when absent, with the assumption shown in evidence; it can be corrected in the procedure details. Source-linked manual catalogue entry remains available.
+The ECG profile is currently CVH-oriented (`G313` disabled). Suggestions distinguish explicit and inferred work; inferred work is a proposal for the physician, not an automatically completed chart statement. Total ED duration alone is not converted into critical-care minutes. The model can estimate active time for described resuscitative work; the draft labels it estimated and allows correction or confirmation. These estimates are not a validated measurement of physician time. Procedure time defaults to encounter time when absent, with the assumption shown in evidence; it can be corrected in the procedure details. Source-linked manual catalogue entry remains available.
 
-Lamina's ingestion/revalidation pipeline is not yet connected. Existing source IDs, quoted evidence and rule relationships provide the integration boundary for source maintenance. Browser inference is connected separately from that pipeline; the interface distinguishes an immediate working assessment from an AI-interpreted encounter.
+Lamina's actual `ingest_paths`, `Workspace`, and `validate_evidence` are connected through `scripts/build_sources.py`. The public-source manifest pins the dependency and maps official guidance to rules R010–R012. The generated bundle contains source hashes, stable unit IDs, exact short excerpts, locators and editorial summaries. Raw public snapshots and the SQLite index remain in ignored `.source-cache/`. Clinical notes never enter this pipeline. These two guidance checks do not establish full current-Schedule verification.
+
+```sh
+python3 -m venv .venv-sources
+.venv-sources/bin/pip install -r requirements-sources.txt
+.venv-sources/bin/python scripts/build_sources.py --refresh
+```
+
+The versioned source bundle also supplies the active Ontario/CVH practice profile. Its default assessment and ECG setting feed the app context. Adding another jurisdiction requires its own verified package and rule implementation; changing a profile label does not create coverage.
 
 ## Source and changes
 
 `engine/data.js`, `validator.js`, `time.js` and `fastbill.js` were extracted from the user-supplied OHIP FastBill v3 HTML. This release replaces the older keyword-to-code app and its remote bridge. Previous versions remain in Git history. If the former app has a saved `billing_queue` in this browser, “Previous app data” appears in the Shift toolbar. It lets you reopen notes or export the original queue; old storage is never deleted or silently converted into reviewed claims.
 
-The engine changes in Folio are narrow, regression-tested fixes: distinguish another physician from the billing clinician; recognize explicit `I applied` and local/general anaesthetic spelling; ask no redundant cast question when confirmed fracture treatment already includes it; and avoid critical-care prompts from negated critical-care statements.
+Folio 1.2 adds care reconstruction, timing provenance, semantic reassessment support and public-source maintenance. It also fixes facial-site normalization, unnecessary actor questions for bundled access, C-suffix sedation routing using the other operator's procedure, and time premiums that were incorrectly following the current clock instead of recorded care.
+
+## Evaluation
+
+Run `python3 qa/server.py`, then open `http://127.0.0.1:8772/qa/models.html`. It uses only the synthetic fixtures in `qa/model-cases.js` and one local model at a time. Results are saved by the local QA server. `node scripts/evaluate_models.cjs` recomputes the acceptance checks and resulting bills from the captured outputs. See `qa/MODEL_EVALUATION.md` and `QA.md` for scope and observed limitations. The benchmark endpoint is development tooling; the billing app has no note-upload endpoint.
 
 The UI and shift persistence are new. Google Fonts DM Sans and Manrope are included under their accompanying SIL Open Font License files in `fonts/`.

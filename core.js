@@ -24,6 +24,9 @@
       "role",
       "codes",
       "critical_minutes",
+      "critical_time_basis",
+      "rule_package",
+      "critical_intervals",
       "status",
     ];
     return [
@@ -37,6 +40,16 @@
         r.role,
         line(r.codes),
         r.criticalMinutes,
+        r.criticalTimeBasis || "",
+        r.ruleVersion || "",
+        (r.criticalIntervals || [])
+          .map(
+            (x) =>
+              new Date(x.start * 60000).toISOString().slice(0, 16) +
+              "/" +
+              new Date(x.end * 60000).toISOString().slice(0, 16),
+          )
+          .join("; "),
         r.status,
       ]),
     ]
@@ -103,7 +116,16 @@
       return { start: x.start, end: x.end };
     });
     if (criticalIntervals.length > 100) throw Error("Too many intervals.");
-    const reviewed = r.reviewed === true;
+    const criticalTimeBasis = ["documented", "estimated", "confirmed"].includes(
+      r.criticalTimeBasis,
+    )
+      ? r.criticalTimeBasis
+      : r.criticalMinutes
+        ? "documented"
+        : null;
+    const criticalProposed =
+      r.criticalProposed === true || criticalTimeBasis === "estimated";
+    const reviewed = r.reviewed === true && !criticalProposed;
     return {
       encounterId: r.encounterId,
       reference: r.reference.trim(),
@@ -126,13 +148,21 @@
         ? r.criticalMinutes
         : null,
       criticalIntervals,
+      ruleVersion:
+        typeof r.ruleVersion === "string" ? r.ruleVersion.slice(0, 100) : null,
+      criticalTimeBasis,
+      criticalProposed,
       periodKey:
         typeof r.periodKey === "string" ? r.periodKey.slice(0, 100) : null,
       specialVisit: r.specialVisit === true,
       tripId: typeof r.tripId === "string" ? r.tripId.slice(0, 80) : null,
       travelClaimed: r.travelClaimed === true,
       reviewed,
-      status: reviewed ? "REVIEWED DRAFT" : "HOLD",
+      status: criticalProposed
+        ? "PROPOSED TIMING"
+        : reviewed
+          ? "REVIEWED DRAFT"
+          : "HOLD",
       savedAt: typeof r.savedAt === "string" ? r.savedAt.slice(0, 40) : "",
       version: "folio-1",
     };

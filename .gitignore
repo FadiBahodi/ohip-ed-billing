@@ -1,3 +1,6 @@
 .DS_Store
 node_modules/
 *.log
+.source-cache/
+.venv-sources/
+__pycache__/

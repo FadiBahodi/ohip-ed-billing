@@ -443,8 +443,7 @@
       critical.tier = "life";
       critical.evidence = threat.map((x) => x.text);
       critical.interventions = rescue.map((x) => x.text);
-      critical.reason =
-        "Organ failure and active resuscitation are described; verify the tier and exclusive intervals.";
+      critical.reason = "Active resuscitation for acute organ failure.";
     } else if (
       otherThreat.length &&
       (rescue.length ||
@@ -453,8 +452,7 @@
       critical.tier = "other";
       critical.evidence = otherThreat.map((x) => x.text);
       critical.interventions = rescue.map((x) => x.text);
-      critical.reason =
-        "Threat and rescue work described; compensated observations do not disqualify care.";
+      critical.reason = "Resuscitative work for a threatened life or limb.";
     } else if (critMention || threat.length || rescue.length) {
       critical.tier = "uncertain";
       critical.evidence = [...threat, ...otherThreat].map((x) => x.text);
@@ -507,14 +505,14 @@
         ss.find((s) => /multiple.system|detailed\s+history/i.test(s.text))
           ?.text || "";
     } else if (
-      /\b(?:minor\s+assessment|limited\s+assessment|trivial\s+recheck|simple\s+prescription\s+renewal)\b/i.test(
+      /\b(?:minor\s+assessment|focused\s+assessment|limited\s+assessment|trivial\s+recheck|simple\s+prescription\s+renewal)\b/i.test(
         note,
       )
     ) {
       level = "minor";
       levelEvidence =
         ss.find((s) =>
-          /minor\s+assessment|limited\s+assessment|trivial|simple\s+prescription/i.test(
+          /minor\s+assessment|focused\s+assessment|limited\s+assessment|trivial|simple\s+prescription/i.test(
             s.text,
           ),
         )?.text || "";
@@ -1185,14 +1183,18 @@
         for (const x of base)
           add(
             x.code,
-            `${intervals.total} documented qualifying minutes; aggregate before rounding`,
+            `${intervals.total} ${f.critical.timeBasis === "estimated" ? "proposed" : "documented"} care minutes; aggregate before rounding`,
             f.critical.evidence.join(" | "),
             x.units,
             ["R010", "R011", "R012"],
           );
         add(
-          V.otherPremium(f.date, f.time, ctx.holiday),
-          "Other-service premium; no ordinary assessment for the same work",
+          V.otherPremium(
+            f.date,
+            f.critical.intervals[0]?.start || f.time,
+            ctx.holiday,
+          ),
+          "Other-service premium matched to the start of critical care",
           "",
           1,
           ["R005"],
@@ -1371,7 +1373,30 @@
         );
         continue;
       }
-      if (e.actor === "nurse" || e.actor === "other") {
+      if (
+        crit &&
+        [
+          "iv",
+          "foley",
+          "central_line",
+          "arterial_line",
+          "intubation",
+          "abg",
+          "ng_lavage",
+        ].includes(e.service)
+      ) {
+        excluded.push(e.label + ": included in this critical-care pathway.");
+        continue;
+      }
+      if (
+        (e.actor === "nurse" || e.actor === "other") &&
+        !(
+          f.role === "sedation" &&
+          ["fracture_reduction", "dislocation", "cardioversion"].includes(
+            e.service,
+          )
+        )
+      ) {
         excluded.push(
           e.label +
             ": performed by " +
@@ -1389,7 +1414,7 @@
         );
         continue;
       }
-      if (e.actor === "unknown") {
+      if (e.actor === "unknown" && f.role !== "sedation") {
         questions.push(
           question(
             e.service + "_actor",
@@ -1403,21 +1428,6 @@
       }
       if (f.role === "assistant") {
         excluded.push(e.label + ": role is assistant, not primary operator.");
-        continue;
-      }
-      if (
-        crit &&
-        [
-          "iv",
-          "foley",
-          "central_line",
-          "arterial_line",
-          "intubation",
-          "abg",
-          "ng_lavage",
-        ].includes(e.service)
-      ) {
-        excluded.push(e.label + ": included in this critical-care pathway.");
         continue;
       }
       if (crit && f.critical.tier === "life" && e.service === "cardioversion") {
@@ -1486,7 +1496,11 @@
             add(p, "Anaesthesia premium follows case commencement");
             if (timing)
               add(
-                V.otherPremium(f.date, f.time, ctx.holiday),
+                V.otherPremium(
+                  ranges.items[0].date,
+                  ranges.items[0].start,
+                  ctx.holiday,
+                ),
                 "Sedation-only other-service premium",
               );
             warnings.push(
@@ -1605,18 +1619,32 @@
           "Clinical-service routing and Form 8 reporting are separate. Verify current report submission and fee rules.",
         rule_ids: ["R035"],
       });
-    if (ctx.reassessments || f.reassessments?.length) {
-      for (const r of ctx.reassessments || f.reassessments) {
+    if (!crit && (ctx.reassessments || f.reassessments?.length)) {
+      let lastAssessment = V.stamp(f.date, f.time),
+        reassessmentCount = 0;
+      for (const r of [...(ctx.reassessments || f.reassessments)].sort(
+        (a, b) =>
+          V.stamp(a.date || f.date, a.time) - V.stamp(b.date || f.date, b.time),
+      )) {
         if (!r.time || !f.time || !f.date) continue;
         const ra = V.stamp(r.date || f.date, r.time),
-          last = V.stamp(r.lastDate || f.date, r.lastTime || f.time);
-        if (ra - last >= 120 && r.newOrder && r.notDisposition)
+          last = r.lastTime
+            ? V.stamp(r.lastDate || f.date, r.lastTime)
+            : lastAssessment;
+        if (
+          ra - last >= 120 &&
+          r.newOrder &&
+          r.notDisposition &&
+          reassessmentCount < 2
+        ) {
+          reassessmentCount++;
+          lastAssessment = ra;
           add(
             V.assessment(r.date || f.date, r.time, "reassessment", ctx.holiday),
-            "Separately confirmed substantive reassessment",
+            r.reason || "Substantive reassessment with further care",
             r.evidence || "Clinician-confirmed",
           );
-        else
+        } else
           excluded.push(
             "Reassessment does not meet confirmed elapsed-time/new-care/non-disposition requirements.",
           );
@@ -1682,6 +1710,8 @@
       warnings: unique(warnings),
       blockers,
       critical: crit,
+      criticalTimeBasis: crit ? f.critical.timeBasis || "documented" : null,
+      criticalProposed: crit && !!f.critical.proposed,
       criticalMinutes: crit ? intervals.total : null,
       criticalIntervals: crit ? abs : [],
       period,

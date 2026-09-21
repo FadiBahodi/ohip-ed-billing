@@ -263,7 +263,11 @@
     for (const l of ls) {
       let type = null,
         priority = 0;
-      if (/\b(?:PIA|physician initial assessment)\s*:/i.test(l.text)) {
+      if (
+        /\b(?:PIA|physician initial assessment)(?:\s*[:@]|\s+(?=\d))/i.test(
+          l.text,
+        )
+      ) {
         type = "assessment";
         priority = 90;
       }
@@ -328,7 +332,7 @@
       }
       if (!type) continue;
       const ts = tokens(l.text, {
-        assume24: /PIA\s*:|^\s*\d{4}\s|ED Course/i.test(l.text),
+        assume24: /\bPIA\b|^\s*\d{4}\s|ED Course/i.test(l.text),
         period,
         year,
       });

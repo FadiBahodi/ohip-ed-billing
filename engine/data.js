@@ -6,12 +6,13 @@ globalThis.FASTBILL_DATA = {
     jurisdiction: "Ontario",
     current_schedule_fully_verified: false,
     source_note:
-      "Current July 2026 official PDF and Aug 2026 bulletin blocked on direct retrieval; inherited source flags retained. Core assessment and critical-care text rechecked against the historical official Schedule hosted by OMA. Per-rule review status is displayed.",
+      "Time recording and critical-care examples were checked against Ontario guidance on 2026-09-21. Lamina source IDs, hashes and exact excerpts are linked for R010–R012. The full current Schedule and rates remain incompletely verified; other inherited rule flags are retained.",
     service_count: 49,
     code_count: 190,
     rule_count: 50,
     default_date_locale: "DD/MM/YYYY",
-    model_benchmarked: false,
+    model_benchmarked: true,
+    model_benchmark_scope: "Synthetic browser engineering cases; see qa/MODEL_EVALUATION.md",
   },
   services: [
     {

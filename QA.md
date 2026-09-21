@@ -1,29 +1,31 @@
-# Folio 1.1 verification
+# Folio 1.2 verification
 
-Checked on 2026-09-21. Synthetic encounters only.
+## Software and calculation
 
-## Automated
+`npm test`: 44 passing tests at the time of the release checks. These cover clock defaults, the reported H133 example, clinician overrides, note chronology, semantic procedures, facial-site mapping, critical-care reconstruction, interval subtraction and merging, units, time-premium selection, reassessment spacing, sedation attribution, source-bundle references, backup/CSV provenance, stale model rejection and worker lifecycle.
 
-`npm test`: 29 passing tests. The suite covers the reported chest-pain example, Toronto clock and time bands, explicit note timing, clinician overrides, preservation of the working ED assessment when a small model proposes a different descriptor from a sparse note, semantic procedure-to-code compilation, critical-care pathway units, passage-ID grounding, provider attribution, refusals, critical-time overlap and bundling, saved-record field whitelists, backup/CSV behavior, stale model response rejection, worker pause/restart and Qwen's empty thinking prefix.
+`npm run build` produces the pinned browser bundles. The source build was run twice against cached official pages and returned the same bundle hash. It uses Lamina's real source ingest, workspace and exact-evidence validator.
 
-Syntax checks, the vendor build and `git diff --check` passed. The inherited FastBill report's 361 checks were not available as runnable source and are not represented as rerun here.
+## Actual browser inference
 
-## Connected browser checks
+See `qa/MODEL_EVALUATION.md` for the three-model comparison, raw outputs, scoped scoring and limitations. The final Qwen3.5 4B pipeline passed the specified checks on twelve synthetic encounters. This is actual on-device inference, not mocked output and not independent clinical validation.
 
-- Typing “27 year old female, chest pain, 25 minutes.” produces a working assessment without pressing Update, answering date/time/descriptor questions or checking a review box. At Monday 17:30 the draft is H133. Copy was verified through the browser clipboard.
-- The actual Qwen3 4B model downloaded and ran through WebGPU in the Codex Chromium browser. This was real local inference, not a mocked response or a remote model call.
-- “I closed the 3 cm forearm cut with stitches under local.” was interpreted as laceration repair and added Z176. The legacy extractor alone found no procedure for that phrasing.
-- A hypotension/norepinephrine narrative produced a critical-care opportunity. The ICU fellow's central line was not added to the author's bill. Selecting the critical-care option and entering 16:00–16:20 produced G521 + G523 and removed the ordinary assessment path. The note's 45-minute ED stay was not used as critical-care time.
-- Saving without a reference creates an encounter label automatically. A new encounter clears the earlier pathway. The warm model accepted a subsequent note after the cancellation-path fix.
-- A measured 366 CSS-pixel viewport had no horizontal document overflow. Draft actions remained available below the note. The note's mobile height was subsequently reduced to bring the draft closer.
-- First-generation timings on this device included 8.6–18.0 seconds before evidence-ID optimization; a warm chest-pain interpretation using IDs completed in 7.1 seconds. These are observations, not a latency guarantee. The working draft updates independently after a 100 ms typing debounce.
+## Connected UI checks
 
-## Issues found and addressed
+Verified locally:
 
-The initial 1.7B model produced unrelated work and was rejected. Testing the 4B path uncovered descriptor mistakes, a stale cancellation flag in WebLLM's non-streaming path, malformed quote output and interrupted model downloads. The release uses the 4B model, clearer OHIP context and examples, a stable working ED descriptor, constrained source-passage IDs, the streaming API, stale-response rejection and bounded model-download retries. Pause terminates the worker; retry recreates it while preserving downloaded model caches.
+- Recorded critical-care intervals build G521 + G523 automatically without filling a timing form.
+- Recorded afternoon care avoids a spurious current-evening premium.
+- Confirming the timeline, copying codes and saving the draft work.
+- Adjusting 14:00–14:16 to 14:00–14:20 recalculates the total from 26 to 30 minutes and updates copied chart wording.
+- Untimed pressor-treated shock runs through the actual local model and produces a 15-minute estimated timeline and critical-care codes automatically. The model retains the ICU physician's central-line attribution.
+- Saving that estimate, reloading the shift and reopening it preserves “Proposed timing”. CSV and JSON downloads were opened and checked: recorded/confirmed versus estimated timing, intervals and the rule-package version are preserved; raw notes and model evidence are absent.
+- Restoring the two synthetic records from the downloaded backup succeeds without duplicates.
+- At a 320 CSS-pixel viewport, the note, care timeline and actions fit without horizontal page overflow. The recorded respiratory example retains its 33-minute total through actual model inference.
+- A 2,288-character synthetic wound note is processed in bounded sections. The repair in its final paragraph reaches Z176 after actual inference; no critical-care proposal is added.
 
-## Limits of this verification
+Public deployment and asset freshness are checked after pushing the release. These local checks do not stand in for that live check.
 
-These journeys demonstrate connected behavior, not comprehensive clinical accuracy. The small local model still produces variable reasoning and should be benchmarked across a much larger clinical set. It may miss work, propose an inappropriate descriptor or offer an unhelpful opportunity. Sparse chief complaints preserve the working ED descriptor; alternate model descriptors are visible among the clinician's choices. Focused procedures and explicit descriptors refine that default. The model has a 4096-token context window; very long encounters can exceed it and leave the immediate draft available with an AI error status.
+## Coverage limits
 
-Current dollar rates are not bundled, some inherited mappings still need current-Schedule review, and the site profile remains CVH-oriented. Lamina source ingestion/revalidation and claim submission are not connected. Software tests are separate from current-Schedule validation.
+Dollar rates and the full current Schedule remain incompletely verified. The new official-guidance bundle supports time recording and critical-care examples for R010–R012; it is not validation of every inherited rule. Estimated physician time is a proposed reconstruction, not a measured fact. Calendar-crossing critical care still needs per-day allocation review. Some anaesthesia listings are outside the focused catalogue. No claims are submitted by this app.

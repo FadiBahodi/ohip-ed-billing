@@ -1,0 +1,2 @@
+lamina-engine @ git+https://github.com/FadiBahodi/lamina.git@6201fe4abdf019771eaab68655431039308fc947
+lxml>=5,<7
