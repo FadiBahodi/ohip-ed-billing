@@ -9,7 +9,7 @@ export class LocalInterpreter {
   ensure() {
     if (this.worker) return;
     this.worker = new Worker(
-      new URL("./semantic-worker.js?v=1.2.0", import.meta.url),
+      new URL("./semantic-worker.js?v=1.2.1", import.meta.url),
       {
         type: "module",
       },

@@ -354,7 +354,11 @@
               o.pathway === "documentation" &&
               services.some(
                 (e) =>
-                  ["other", "nurse"].includes(e.actor) && e.quote === o.quote,
+                  ["other", "nurse"].includes(e.actor) &&
+                  typeof e.quote === "string" &&
+                  typeof o.quote === "string" &&
+                  o.quote.length > 0 &&
+                  e.quote.includes(o.quote),
               )
             ),
         ),

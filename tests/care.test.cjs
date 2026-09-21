@@ -6,6 +6,28 @@ const Care = require("../engine/care.js"),
   D = require("../engine/data.js"),
   C = require("../core.js");
 const now = { date: "2026-09-21", time: "14:00" };
+test("resolved other-operator evidence does not produce a redundant documentation prompt", () => {
+  const fixture =
+    require("../qa/results/Qwen3.5-4B-q4f16_1-MLC.json").results.find(
+      (r) => r.fixture === "shock-estimate",
+    );
+  const model = structuredClone(fixture.interpretation);
+  const note =
+    "BP 72/40 despite fluid boluses, confused and cool. Started norepi, titrated twice while following perfusion and bedside ultrasound. Rechecked after each change. ICU inserted the central line. 90 minutes in the department overall.";
+  model.opportunities.push({
+    title: "Capture serial perfusion findings",
+    detail: "Record response to pressor changes.",
+    quote: "Rechecked after each change.",
+    pathway: "documentation",
+  });
+  const validated = A.validate(model, note, D);
+  assert.equal(validated.ok, true);
+  assert.equal(validated.value.services[0].actor, "other");
+  assert.deepEqual(
+    validated.value.opportunities.map((o) => o.title),
+    ["Capture serial perfusion findings"],
+  );
+});
 function interpretation(note, episodes, tier = "life") {
   return {
     assessment: { level: "multisystem", reason: "Assessment", quote: note },
