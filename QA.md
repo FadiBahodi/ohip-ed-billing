@@ -26,7 +26,7 @@ Verified locally:
 
 Public verification of release `fbdcdd0` passed on GitHub Pages: the deployment completed successfully and all eleven checked HTML/script/style assets matched the local SHA-256 hashes. In a fresh public tab, the reported chest-pain note produced H133 immediately, retained it after Qwen3.5 interpretation, and copied H133 to the clipboard. The untimed shock note automatically produced a 15-minute estimated timeline with G521 + H114.
 
-That live run exposed a redundant central-line attribution reminder because its evidence was a shorter span of already resolved ICU-operator evidence. The 1.2.1 patch removes that reminder and adds a regression using the captured model output while retaining unrelated documentation opportunities. The final deployed patch and recorded-care journey are verified after publication.
+That live run exposed a redundant central-line attribution reminder because its evidence was a shorter span of already resolved ICU-operator evidence. The 1.2.1 patch removes that reminder and adds a regression using the captured model output while retaining unrelated documentation opportunities. Confirming proposed care and changing the assessment clock preserves the confirmed interval clocks. A stray null text node in the expanded procedure evidence was also removed. The final deployed patch and recorded-care journey are verified after publication.
 
 ## Coverage limits
 

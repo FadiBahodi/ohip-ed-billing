@@ -1140,7 +1140,7 @@ function render() {
               text: "Time: " + ev.time + " · edit",
               onclick: () => editServiceTime(ev),
             })
-          : null,
+          : "",
     );
   for (const text of [...(r.excluded || []), ...(r.warnings || [])])
     evidence.append(E("div", { class: "small-row", text }));
