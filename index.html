@@ -1,183 +1,271 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>What do I bill? — OHIP ED code advisor</title>
-  <meta name="description" content="OHIP emergency department code advisor for THP Credit Valley. Grounded in the live Schedule of Benefits, not hallucinated. A code advisor, not a submitter." />
-  <meta name="theme-color" content="#0e1a22" />
-  <!-- empty icon: prevents a /favicon.ico 404, no network -->
-  <link rel="icon" href="data:," />
-  <link rel="stylesheet" href="style.css" />
-</head>
-<body>
-  <main class="wrap">
-    <header class="masthead">
-      <h1>What do I bill?</h1>
-      <p class="sub">OHIP ED code advisor · THP Credit Valley · a code advisor, not a submitter</p>
-    </header>
-
-    <!-- CONNECT (headline feature): reach the user's OWN Claude via their local bridge. Always
-         visible, top of the input column — no expanding, no scrolling. The bridge URL/token live
-         ONLY in this browser (localStorage keys billing_bridge_url / billing_bridge_token) and are
-         used only to POST the case to the user's own `claude -p` bridge. Blank = local engine. -->
-    <section class="panel connect" aria-label="Connect your Claude">
-      <h2 class="connect-title">Use your Claude</h2>
-      <p class="connect-lede">Free, via your Mac. Paste your bridge TOKEN once — the URL is found
-        automatically. Leave blank to use the local engine.</p>
-      <div class="connect-fields">
-        <label class="settings-field connect-token">
-          <span class="field-label">Bridge token</span>
-          <input id="set-bridge-token" class="search" type="text"
-            autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="paste the token" />
-        </label>
-        <label class="settings-field connect-url">
-          <span class="field-label">Assistant bridge URL (auto-detected — leave blank)</span>
-          <input id="set-bridge-url" class="search" type="url"
-            autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="auto-detected — optional override" />
-        </label>
-      </div>
-      <p class="connect-hint">The URL is detected automatically from your Mac's bridge. Only fill it in to override.</p>
-      <div class="connect-status" id="bridge-status" role="status" aria-live="polite">
-        <span class="status-dot" id="bridge-status-dot"></span>
-        <span class="status-text" id="bridge-status-text">Checking for your bridge…</span>
-      </div>
-    </section>
-
-    <!-- THE ANSWER (hero). id="output" is the live result region. -->
-    <section id="output" class="hero" aria-live="polite" aria-label="Recommended codes">
-      <div class="hero-top">
-        <span id="engine-badge" class="badge">loading</span>
-        <span id="hero-note" class="hero-note"></span>
-      </div>
-
-      <div class="hero-answer">
-        <div class="hero-code-wrap">
-          <span id="hero-code" class="hero-code">—</span>
-          <span id="hero-label" class="hero-label">Pick a time band and complexity, or read a case.</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta
+      name="description"
+      content="A fast, local-first OHIP billing workspace. Build a draft, find a code and manage your shift."
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <title>Folio — OHIP billing</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./style.css" />
+    <script defer src="./engine/data.js"></script>
+    <script defer src="./engine/validator.js"></script>
+    <script defer src="./engine/time.js"></script>
+    <script defer src="./engine/fastbill.js"></script>
+    <script defer src="./core.js"></script>
+    <script defer src="./app.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <a class="brand" href="#build" aria-label="Folio home"
+          ><svg viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M8 5h17M8 5v23M8 14h13M14 20h11" /></svg
+          ><span>folio<span class="brand-dot">.</span></span></a
+        >
+        <nav aria-label="Main navigation">
+          <button class="nav active" data-page="build">Build a bill</button
+          ><button class="nav" data-page="library">Find a code</button
+          ><button class="nav" data-page="shift">
+            Your shift <span id="shift-count">0</span>
+          </button>
+        </nav>
+        <button class="device-status" id="privacy">
+          <span class="status-dot"></span> On your device
+        </button>
+      </header>
+      <aside class="sidebar">
+        <button class="button primary new-encounter">
+          <span>＋</span> New encounter
+        </button>
+        <div class="sidebar-heading">
+          <span>THIS SHIFT</span
+          ><button
+            class="icon-button"
+            id="shift-settings"
+            aria-label="Shift settings"
+          >
+            ⚙
+          </button>
         </div>
-        <span id="hero-total" class="hero-total">$0<span class="cents">.00</span></span>
-      </div>
-
-      <!-- clarifying question from the assistant bridge (only when it needs one). -->
-      <p id="bridge-ask" class="bridge-ask" role="status" hidden></p>
-
-      <ul id="hero-warnings" class="hero-warnings" role="alert" hidden></ul>
-
-      <ul id="line-items" class="line-items"></ul>
-      <p id="hero-unconfirmed" class="hero-unconfirmed" hidden></p>
-
-      <div class="claim-row">
-        <code id="claim-line" class="claim-line">—</code>
-      </div>
-
-      <div class="actions">
-        <button id="copy-claim" class="btn primary" type="button">Copy claim line</button>
-        <div id="export" class="export" role="group" aria-label="Export">
-          <button class="btn ghost" type="button" data-export="text" title="Copy the full claim block">Copy text</button>
-          <button class="btn ghost" type="button" data-export="csv" title="Download a biller-ready CSV">CSV</button>
-          <button class="btn ghost" type="button" data-export="epic" title="Copy an Epic Charge Capture cheat card">Epic card</button>
+        <p class="shift-label" id="shift-name">My shift</p>
+        <div id="encounter-list"></div>
+        <div class="sidebar-bottom">
+          <button class="text-button" id="source-library">
+            Sources &amp; coverage <span>↗</span></button
+          ><span class="version">FastBill v3 · Folio 1.0</span>
         </div>
+      </aside>
+      <main id="main">
+        <section class="page" id="page-build">
+          <div class="page-heading">
+            <div>
+              <h1>Encounter</h1>
+              <p class="subtitle">
+                Paste a note. Review the draft. Save to your shift.
+              </p>
+            </div>
+            <div class="key-hint">⌘ / Ctrl + Enter to build</div>
+          </div>
+          <div class="workspace">
+            <section class="note-panel panel">
+              <div class="panel-heading">
+                <div><h2>Note</h2></div>
+                <button class="text-button" id="load-note">
+                  Import text <span>↗</span>
+                </button>
+              </div>
+              <label class="field-label" for="reference"
+                >Encounter reference <span>Local label only</span></label
+              ><input
+                id="reference"
+                class="reference-input"
+                maxlength="80"
+                placeholder="e.g. Room 4 · encounter 01"
+                autocomplete="off"
+              /><label class="sr-only" for="note">Clinical encounter note</label
+              ><textarea
+                id="note"
+                maxlength="100000"
+                spellcheck="false"
+                placeholder="Paste your encounter note…&#10;&#10;Include assessment time, your role, procedures and any critical-care intervals."
+              ></textarea>
+              <div class="note-footer">
+                <span id="note-count">Note stays in this tab.</span
+                ><button class="text-button" id="clear-note">Clear</button>
+              </div>
+              <details class="context">
+                <summary>
+                  Encounter context <span>Date, role &amp; coverage</span>
+                </summary>
+                <div class="context-grid">
+                  <label
+                    >Service date<input type="date" id="context-date" /></label
+                  ><label
+                    >Assessment time<input
+                      type="time"
+                      id="context-time" /></label
+                  ><label
+                    >Your role<select id="context-role">
+                      <option value="">Detect from note</option>
+                      <option value="primary">Primary ED physician</option>
+                      <option value="procedure_only">Procedure only</option>
+                      <option value="sedation">Sedation only</option>
+                      <option value="assistant">Assisting only</option>
+                      <option value="handover">Active handover</option>
+                    </select></label
+                  ><label
+                    >Coverage<select id="context-payer">
+                      <option value="">Not confirmed</option>
+                      <option value="ohip">OHIP</option>
+                      <option value="wsib">WSIB</option>
+                      <option value="selfpay">Confirmed self-pay</option>
+                    </select></label
+                  ><label
+                    >Attendance<select id="context-pathway">
+                      <option value="regular">Regular shift</option>
+                      <option value="svp">Requested special visit</option>
+                    </select></label
+                  ><label class="check-label"
+                    ><input type="checkbox" id="context-holiday" /> Applicable
+                    OHIP holiday</label
+                  >
+                </div>
+              </details>
+              <div class="build-row">
+                <button class="button primary" id="build">
+                  Build draft <span>↗</span></button
+                ><span><strong>Processed locally</strong></span>
+              </div>
+              <div class="demo-row">
+                <span>TRY AN EXAMPLE</span
+                ><button data-demo="reduction">Wrist reduction</button
+                ><button data-demo="critical">Resuscitation</button
+                ><button data-demo="declined">Declined procedure</button>
+              </div>
+            </section>
+            <section class="draft-panel panel">
+              <div class="panel-heading">
+                <div><h2>Draft</h2></div>
+                <label class="toggle-label"
+                  ><input type="checkbox" id="show-codes" checked /><span
+                    class="toggle"
+                  ></span
+                  >Codes</label
+                >
+              </div>
+              <div id="draft-content"></div>
+            </section>
+          </div>
+          <p class="under-workspace">
+            <span class="mini-icon">↳</span> Clinical notes stay in this tab.
+            Saved shifts contain references, codes and timing — not your notes.
+            <button class="text-button" id="privacy-inline">
+              How this works
+            </button>
+          </p>
+        </section>
+        <section class="page" id="page-library" hidden>
+          <div class="page-heading">
+            <div>
+              <h1>Code library</h1>
+              <p class="subtitle">Search by procedure, phrase or code.</p>
+            </div>
+            <span class="tag">190 codes · 50 rule cards</span>
+          </div>
+          <div class="search-field">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.5" cy="10.5" r="6.5" />
+              <path d="m16 16 5 5" /></svg
+            ><input
+              id="query"
+              type="search"
+              placeholder="Try “distal radius”, “abscess”, or “G521”"
+              aria-label="Search the billing library"
+              autocomplete="off"
+            /><kbd>/</kbd>
+          </div>
+          <div class="search-suggestions">
+            <span>Explore</span
+            ><button data-search="assessment">Assessments</button
+            ><button data-search="laceration">Lacerations</button
+            ><button data-search="critical care">Critical care</button
+            ><button data-search="sedation">Sedation</button
+            ><button data-search="special visit">Special visits</button
+            ><button data-search="">All codes</button>
+          </div>
+          <div class="results-label">
+            <span id="result-count"></span
+            ><span>Code details include linked rules &amp; source status</span>
+          </div>
+          <div id="search-results"></div>
+        </section>
+        <section class="page" id="page-shift" hidden>
+          <div class="page-heading">
+            <div>
+              <h1>Shift</h1>
+              <p class="subtitle">Review and export saved encounters.</p>
+            </div>
+            <button class="button primary new-encounter">
+              ＋ New encounter
+            </button>
+          </div>
+          <div id="shift-stats" class="shift-stats"></div>
+          <div class="shift-toolbar">
+            <div>
+              <button class="button secondary" id="export-csv">
+                Export CSV ↗</button
+              ><button class="button secondary" id="export-json">
+                Backup JSON</button
+              ><button class="text-button" id="import-json">
+                Restore backup
+              </button>
+            </div>
+            <button class="text-button" id="print-shift">Print / PDF</button>
+          </div>
+          <div class="panel table-panel" id="shift-table"></div>
+          <p class="muted small">
+            Exports are billing drafts, not OHIP submission files. Include held
+            encounters only after resolving their open questions. A backup
+            contains encounter references and timing; store it with the same
+            care as your billing records.
+          </p>
+        </section>
+      </main>
+      <footer class="mobile-footer">
+        <button class="text-button" id="mobile-sources">
+          Sources &amp; coverage</button
+        ><span>Folio 1.0</span>
+      </footer>
+    </div>
+    <dialog id="modal">
+      <div class="modal-header">
+        <h2 id="modal-title"></h2>
+        <button id="modal-close" class="icon-button" aria-label="Close dialog">
+          ✕
+        </button>
       </div>
-      <p id="copy-toast" class="toast" role="status" aria-live="polite"></p>
-    </section>
-
-    <!-- INPUT (a): free text -> parse -> chips + pick() -->
-    <section class="panel" aria-label="Read the case">
-      <label class="field-label" for="case-text">Read the case</label>
-      <textarea id="case-text" class="freetext"
-        placeholder="e.g. 2am, chest pain, full workup, intubated, then admitted"></textarea>
-      <div class="row">
-        <button id="parse-btn" class="btn" type="button">Read the case</button>
-        <button id="queue-btn" class="btn outline" type="button" title="Fire this case off and keep going — the codes fill in below">Add to queue</button>
-        <span id="parse-hint" class="hint">Type the case, or set the chips below.</span>
-      </div>
-    </section>
-
-    <!-- QUEUE: fire off many cases without waiting; codes fill in as each finishes. Processed by the
-         same bridge (your Claude), max 3 in flight. Persisted to localStorage (billing_queue) so a
-         refresh/close never loses a case. Hidden until the first case is queued. -->
-    <section class="panel queue" id="queue-panel" aria-label="Case queue" hidden>
-      <div class="queue-head">
-        <h2 class="queue-title">Queue</h2>
-        <div class="queue-actions">
-          <button id="queue-copy-all" class="btn outline mini" type="button"
-            title="Copy every finished case's codes — one line per case, for the end-of-day face sheet">Copy all codes</button>
-          <button id="queue-clear-done" class="btn outline mini" type="button">Clear done</button>
-          <button id="queue-clear-all" class="btn outline mini" type="button">Clear all</button>
-        </div>
-      </div>
-      <ul id="queue-list" class="queue-list"></ul>
-    </section>
-
-    <!-- INPUT (b): quick-pick chips, built from data/rules.json + data/codes.json -->
-    <section class="panel" aria-label="Quick pick">
-      <div class="pickgroup">
-        <div class="group-label">Time band</div>
-        <div id="time-chips" class="chips" role="radiogroup" aria-label="Time band"></div>
-      </div>
-      <div class="pickgroup">
-        <div class="group-label">Complexity</div>
-        <div id="complexity-chips" class="chips" role="radiogroup" aria-label="Complexity"></div>
-      </div>
-      <div class="pickgroup">
-        <div class="group-label">Special visit</div>
-        <div id="svp-chips" class="chips" aria-label="Special visit premium"></div>
-      </div>
-      <div class="pickgroup">
-        <div class="group-label">Procedures <span class="muted">(stack on top)</span></div>
-        <input id="proc-search" class="search" type="text" placeholder="Search all procedures…"
-          autocomplete="off" autocapitalize="off" spellcheck="false" />
-        <div id="procedure-chips" class="chips" aria-label="Procedures"></div>
-      </div>
-    </section>
-
-    <!-- SETTINGS: your billing numbers + optional assistant bridge. Stored ONLY in this browser
-         (localStorage). The billing numbers never leave the page; the bridge URL/token are used only
-         to POST the case to YOUR own local `claude -p` bridge when you set them. -->
-    <details class="disclose" id="settings-wrap">
-      <summary>Settings — your billing numbers</summary>
-      <div class="disclose-body">
-        <p class="settings-note">Enter these once. They are saved only in <strong>this browser</strong>
-          (localStorage) and fill the claim header, CSV, and FHIR export.</p>
-        <div class="settings-grid">
-          <label class="settings-field">
-            <span class="field-label">OHIP billing #</span>
-            <input id="set-ohip" class="search" type="text" inputmode="numeric"
-              autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. 000000" />
-          </label>
-          <label class="settings-field">
-            <span class="field-label">Group billing #</span>
-            <input id="set-group" class="search" type="text"
-              autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="e.g. 0000" />
-          </label>
-        </div>
-        <div class="row">
-          <button id="settings-clear" class="btn ghost" type="button">Clear</button>
-          <span id="settings-status" class="hint">Until set, the claim header shows “OHIP# —”.</span>
-        </div>
-      </div>
-    </details>
-
-    <!-- SECONDARY detail, progressively disclosed -->
-    <details class="disclose" id="why-wrap">
-      <summary>Why these codes</summary>
-      <div class="disclose-body"><ul id="why" class="reasoning"></ul></div>
-    </details>
-
-    <details class="disclose" id="sources-wrap">
-      <summary>Sources</summary>
-      <div class="disclose-body"><div id="sources" class="citations"></div></div>
-    </details>
-
-    <footer class="foot" id="data-note">
-      Grounded in the live OHIP Schedule of Benefits + EM London + DoctorCare QRG. Every code cites a source.
-      Amounts marked * are unconfirmed against the current SOB. This produces the code + claim line you type into
-      Epic Charge Capture or hand to the biller. It does not submit to the MOH.
-    </footer>
-  </main>
-
-  <!-- Local module only. No external scripts, no keys, no network. -->
-  <script type="module" src="app.js"></script>
-</body>
+      <div id="modal-body"></div>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <input
+      type="file"
+      id="note-file"
+      accept="text/plain,.txt,.md"
+      hidden
+    /><input
+      type="file"
+      id="backup-file"
+      accept="application/json,.json"
+      hidden
+    />
+  </body>
 </html>

@@ -1,0 +1,1 @@
+{"version":1,"shiftName":"Synthetic QA shift","ledger":[{"encounterId":"QA-restore-001","reference":"QA backup encounter","date":"2026-09-21","time":"11:00","payer":"ohip","role":"primary","codes":[{"code":"H101","units":1}],"criticalIntervals":[],"reviewed":true,"savedAt":"2026-09-21T15:00:00Z"}]}
