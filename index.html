@@ -11,7 +11,7 @@
     <meta name="referrer" content="no-referrer" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://huggingface.co https://*.huggingface.co https://*.hf.co https://raw.githubusercontent.com; object-src 'none'; base-uri 'self'; form-action 'none'"
     />
     <title>Folio — OHIP billing</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
@@ -21,6 +21,8 @@
     <script defer src="./engine/time.js"></script>
     <script defer src="./engine/fastbill.js"></script>
     <script defer src="./core.js"></script>
+    <script defer src="./engine/assist.js"></script>
+    <script type="module" src="./vendor/semantic.js"></script>
     <script defer src="./app.js"></script>
   </head>
   <body>
@@ -61,7 +63,7 @@
         <div class="sidebar-bottom">
           <button class="text-button" id="source-library">
             Sources &amp; coverage <span>↗</span></button
-          ><span class="version">FastBill v3 · Folio 1.0</span>
+          ><span class="version">FastBill v3 · Folio 1.1</span>
         </div>
       </aside>
       <main id="main">
@@ -70,10 +72,12 @@
             <div>
               <h1>Encounter</h1>
               <p class="subtitle">
-                Paste a note. Review the draft. Save to your shift.
+                Type the encounter. Suggestions update automatically.
               </p>
             </div>
-            <div class="key-hint">⌘ / Ctrl + Enter to build</div>
+            <button class="button secondary new-encounter">
+              ＋ New encounter
+            </button>
           </div>
           <div class="workspace">
             <section class="note-panel panel">
@@ -91,12 +95,14 @@
                 maxlength="80"
                 placeholder="e.g. Room 4 · encounter 01"
                 autocomplete="off"
-              /><label class="sr-only" for="note">Clinical encounter note</label
+              />
+              <div id="quick-context" class="quick-context"></div>
+              <label class="sr-only" for="note">Clinical encounter note</label
               ><textarea
                 id="note"
                 maxlength="100000"
                 spellcheck="false"
-                placeholder="Paste your encounter note…&#10;&#10;Include assessment time, your role, procedures and any critical-care intervals."
+                placeholder="Type or paste the encounter. Shorthand works."
               ></textarea>
               <div class="note-footer">
                 <span id="note-count">Note stays in this tab.</span
@@ -142,8 +148,10 @@
               </details>
               <div class="build-row">
                 <button class="button primary" id="build">
-                  Build draft <span>↗</span></button
-                ><span><strong>Processed locally</strong></span>
+                  Update <span>↻</span></button
+                ><button class="text-button" id="ai-status" type="button">
+                  Local AI · starts with your note
+                </button>
               </div>
               <div class="demo-row">
                 <span>TRY AN EXAMPLE</span
@@ -243,7 +251,7 @@
       <footer class="mobile-footer">
         <button class="text-button" id="mobile-sources">
           Sources &amp; coverage</button
-        ><span>Folio 1.0</span>
+        ><span>Folio 1.1</span>
       </footer>
     </div>
     <dialog id="modal">

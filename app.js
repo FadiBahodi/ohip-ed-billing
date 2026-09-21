@@ -3,7 +3,8 @@ const D = FASTBILL_DATA,
   F = FastBill,
   V = BillingEngine,
   T = FastTime,
-  C = FolioCore;
+  C = FolioCore,
+  A = FolioAssist;
 const $ = (s) => document.querySelector(s),
   $$ = (s) => [...document.querySelectorAll(s)];
 const E = (tag, attrs = {}, ...children) => {
@@ -37,6 +38,9 @@ const state = {
   dirty: false,
   savedOnly: false,
   page: "build",
+  clock: null,
+  semantic: null,
+  ai: { status: "idle", message: "Local AI starts with your note" },
 };
 const labels = {
   minor: "Minor assessment",
@@ -143,17 +147,24 @@ function remember() {
       removed: [...state.removed],
       reviewed: state.reviewed,
       time: state.facts?.time,
+      clock: state.clock ? { ...state.clock } : null,
+      semantic: state.semantic,
+      semanticMs: state.semanticMs,
     });
 }
 function syncInputs() {
-  $("#context-date").value = state.ctx.date || "";
-  $("#context-time").value = state.ctx.time || "";
+  $("#context-date").value =
+    state.ctx.date || state.facts?.date || state.clock?.date || A.clock().date;
+  $("#context-time").value =
+    state.ctx.time || state.facts?.time || state.clock?.time || A.clock().time;
   $("#context-role").value = state.ctx.role || "";
   $("#context-payer").value = state.ctx.payer || "";
   $("#context-pathway").value = state.ctx.pathway || "regular";
   $("#context-holiday").checked = !!state.ctx.holiday;
 }
 function newEncounter() {
+  interpreter?.cancel();
+  clearTimeout(semanticTimer);
   remember();
   Object.assign(state, {
     id: crypto.randomUUID(),
@@ -166,6 +177,8 @@ function newEncounter() {
     reviewed: false,
     dirty: false,
     savedOnly: false,
+    clock: null,
+    semantic: null,
   });
   $("#note").value = "";
   $("#reference").value = "";
@@ -176,39 +189,125 @@ function newEncounter() {
   $("#note").focus();
 }
 $$(".new-encounter").forEach((b) => (b.onclick = newEncounter));
-function build() {
+let interpreter = null,
+  semanticTimer,
+  liveTimer;
+function defaultReference() {
+  return "Encounter " + String(state.ledger.length + 1).padStart(2, "0");
+}
+function initInterpreter() {
+  if (interpreter || !window.FolioInterpreter) return;
+  interpreter = new window.FolioInterpreter({
+    onStatus: updateAI,
+    onResult: (m) => {
+      if (
+        state.requestNote !== $("#note").value.trim() ||
+        state.requestEncounter !== state.id
+      )
+        return;
+      const validated = A.validate(m.interpretation, state.requestNote, D);
+      if (!validated.ok) {
+        updateAI({
+          status: "error",
+          message: "Interpretation needs another pass: " + validated.errors[0],
+        });
+        return;
+      }
+      const apply = () => {
+        if (
+          state.requestNote !== $("#note").value.trim() ||
+          state.requestEncounter !== state.id
+        )
+          return;
+        state.semantic = m.interpretation;
+        state.semanticMs = m.elapsed;
+        build({ requestAI: false });
+      };
+      const focused = document.activeElement;
+      if (focused?.closest(".question-section") && focused.tagName === "INPUT")
+        focused.addEventListener("blur", apply, { once: true });
+      else apply();
+    },
+    onError: (m) => updateAI({ status: "error", message: m.message }),
+  });
+}
+window.addEventListener("folio:interpreter-ready", () => {
+  initInterpreter();
+  if ($("#note").value.trim()) scheduleSemantic();
+});
+function updateAI(update) {
+  state.ai = { ...state.ai, ...update };
+  const b = $("#ai-status");
+  if (!b) return;
+  const status = state.ai.status;
+  b.textContent =
+    status === "loading"
+      ? Number.isFinite(state.ai.progress)
+        ? "Local AI · " + Math.round(state.ai.progress * 100) + "%"
+        : "Loading local AI…"
+      : status === "thinking"
+        ? "Reading the encounter…"
+        : status === "ready"
+          ? "Local AI ready"
+          : status === "error"
+            ? "Local AI needs attention ↗"
+            : status === "paused"
+              ? "Local AI paused"
+              : "Local AI · starts with your note";
+  b.dataset.status = status;
+}
+function scheduleSemantic() {
+  clearTimeout(semanticTimer);
+  const note = $("#note").value.trim();
+  if (note.length < 8 || state.ai.status === "paused") return;
+  semanticTimer = setTimeout(() => {
+    initInterpreter();
+    if (!interpreter) return;
+    state.requestNote = $("#note").value.trim();
+    state.requestEncounter = state.id;
+    interpreter.analyze(
+      state.requestNote,
+      D.services.map((x) => ({ id: x.id, label: x.label })),
+    );
+  }, 700);
+}
+function build({ requestAI = true } = {}) {
   const note = $("#note").value.trim();
   if (!note && !state.manual.length) {
-    toast("Add an encounter note or a code from the library.");
-    $("#note").focus();
+    state.result = null;
+    state.facts = null;
+    render();
     return;
   }
   try {
+    state.clock ??= A.clock();
     state.savedOnly = false;
     state.reviewed = false;
-    const a = F.analyze(
+    const start = performance.now();
+    const suggestion = A.suggest(
       note,
+      context(),
+      D,
+      state.clock,
+      state.semantic,
+    );
+    state.facts = suggestion.facts;
+    state.base = F.compile(
+      state.facts,
       context(),
       D,
       state.ledger.filter((r) => r.encounterId !== state.id),
     );
-    state.facts = a.facts;
-    state.base = a.result;
-    state.elapsed = a.totalMs;
+    state.elapsed = performance.now() - start;
     state.dirty = false;
     applyItems();
     remember();
     render();
     renderSidebar();
-    if (innerWidth < 701)
-      $(".draft-panel").scrollIntoView({ behavior: "smooth", block: "start" });
+    syncInputs();
+    if (requestAI && !state.semantic) scheduleSemantic();
   } catch (e) {
-    state.result = null;
-    render();
-    toast(
-      "This note could not be parsed. Check dates and times, then try again. " +
-        e.message,
-    );
+    updateAI({ status: "error", message: e.message });
   }
 }
 function applyItems() {
@@ -234,34 +333,21 @@ function applyItems() {
   state.result = r;
 }
 function recompile() {
-  if (!state.facts) return;
-  try {
-    state.reviewed = false;
-    state.facts = F.applyOverrides(state.facts, context());
-    state.base = F.compile(
-      state.facts,
-      context(),
-      D,
-      state.ledger.filter((r) => r.encounterId !== state.id),
-    );
-    applyItems();
-    state.dirty = false;
-    remember();
-    render();
-  } catch (e) {
-    toast("Check the entered value. " + e.message);
-  }
+  build({ requestAI: false });
 }
-$("#build").onclick = build;
+$("#build").onclick = () => build();
 $("#note").oninput = () => {
+  state.clock ??= A.clock();
   state.dirty = true;
   state.reviewed = false;
-  state.ctx.overrides = {};
   state.savedOnly = false;
-  state.facts = null;
-  state.result = null;
-  state.base = null;
-  render();
+  state.semantic = null;
+  interpreter?.cancel();
+  clearTimeout(semanticTimer);
+  clearTimeout(liveTimer);
+  $("#note-count").textContent =
+    $("#note").value.length.toLocaleString() + " characters · only in this tab";
+  liveTimer = setTimeout(() => build(), 100);
 };
 $("#reference").oninput = () => {
   state.reviewed = false;
@@ -288,6 +374,11 @@ $("#clear-note").onclick = () => {
       class: "button primary",
       text: "Clear note",
       onclick: () => {
+        interpreter?.cancel();
+        clearTimeout(semanticTimer);
+        clearTimeout(liveTimer);
+        state.semantic = null;
+        state.clock = null;
         state.session.delete(state.id);
         $("#note").value = "";
         state.facts = null;
@@ -314,8 +405,8 @@ $("#note-file").onchange = async (e) => {
     newEncounter();
     $("#note").value = await f.text();
     state.dirty = true;
-    render();
-    toast("Text imported. Review the encounter, then build your draft.");
+    build();
+    toast("Text imported. Suggestions are updating.");
   } catch (x) {
     toast(x.message);
   }
@@ -394,7 +485,7 @@ function questionCard(q, remaining = 0) {
   const card = E(
     "div",
     { class: "question-section" },
-    E("div", { class: "question-label", text: "NEEDS INPUT" }),
+    E("div", { class: "question-label", text: "REFINE" }),
     E("h3", { text: q.text }),
   );
   const opts = E("div", { class: "options" });
@@ -474,12 +565,175 @@ function sourceNote() {
     }),
   );
 }
+function editClock(field) {
+  const current =
+    state.facts?.[field] || state.clock?.[field] || A.clock()[field];
+  const input = E("input", {
+    type: field === "date" ? "date" : "time",
+    value: current,
+    "aria-label": field === "date" ? "Service date" : "Assessment time",
+  });
+  modal(
+    field === "date" ? "Service date" : "Assessment time",
+    input,
+    E("button", {
+      class: "button primary",
+      text: "Use this",
+      onclick: () => {
+        state.ctx[field] = input.value;
+        if (field === "date") state.ctx.dateConfirmed = true;
+        $("#modal").close();
+        build({ requestAI: false });
+      },
+    }),
+  );
+}
+function editServiceTime(event) {
+  const date = E("input", {
+    type: "date",
+    value: event.date || state.facts.date,
+    "aria-label": "Procedure date",
+  });
+  const time = E("input", {
+    type: "time",
+    value: event.time || state.facts.time,
+    "aria-label": "Procedure time",
+  });
+  modal(
+    event.label + " · time",
+    date,
+    time,
+    E("button", {
+      class: "button primary",
+      text: "Use this",
+      onclick: () => {
+        if (!date.value || !time.value) return;
+        state.ctx.overrides.events ??= {};
+        state.ctx.overrides.events[event.service] = {
+          ...state.ctx.overrides.events[event.service],
+          date: date.value,
+          time: time.value,
+        };
+        $("#modal").close();
+        build({ requestAI: false });
+      },
+    }),
+  );
+}
+function renderQuickContext() {
+  const now = state.clock || A.clock(),
+    f = state.facts;
+  $("#quick-context").replaceChildren(
+    E("button", {
+      class: "context-chip",
+      text:
+        (f?.date || now.date) +
+        (f?.assumptions?.find((x) => x.field === "date")
+          ? " · " + f.assumptions.find((x) => x.field === "date").source
+          : !f
+            ? " · today"
+            : ""),
+      onclick: () => editClock("date"),
+    }),
+    E("button", {
+      class: "context-chip",
+      text:
+        (f?.time || now.time) +
+        (f?.assumptions?.some((x) => x.field === "time") || !f ? " · now" : ""),
+      onclick: () => editClock("time"),
+    }),
+    E("span", { class: "context-zone", text: "Toronto" }),
+  );
+}
+function assessmentChoices() {
+  const f = state.facts;
+  if (!f || !["primary", "handover"].includes(f.role) || state.result?.critical)
+    return null;
+  const choices = E(
+    "details",
+    { class: "assessment-choices" },
+    E("summary", { text: "Change assessment" }),
+  );
+  choices.append(
+    E(
+      "div",
+      { class: "options" },
+      ["minor", "multisystem", "comprehensive"].map((level) =>
+        E("button", {
+          class: "option " + (f.assessment?.level === level ? "selected" : ""),
+          text:
+            labels[level] +
+            " · " +
+            V.assessment(f.date, f.time, level, state.ctx.holiday) +
+            (f.interpretation?.assessment?.level === level &&
+            level !== f.assessment.level
+              ? " · AI option"
+              : ""),
+          onclick: () => {
+            state.ctx.overrides.level = level;
+            build({ requestAI: false });
+          },
+        }),
+      ),
+    ),
+  );
+  return choices;
+}
+function criticalOption(opportunity) {
+  const tier = opportunity.pathway === "critical_life" ? "life" : "other";
+  const input = E("input", {
+    placeholder: "e.g. 16:10–16:25; 16:40–16:50",
+    "aria-label": "Resuscitation intervals",
+  });
+  const preview = E("p", {
+    class: "code-preview",
+    text: tier === "life" ? "G521 → G523 → G522" : "G395 → G391",
+  });
+  input.oninput = () => {
+    const ranges = T.ranges(input.value, state.facts.date, { assume24: true });
+    preview.textContent = ranges.items.length
+      ? C.line(V.criticalUnits(ranges.total, tier)) +
+        " · " +
+        ranges.total +
+        " min"
+      : "Enter the care intervals to calculate units.";
+  };
+  modal(
+    "Critical-care option",
+    E("p", { text: opportunity.detail }),
+    E("label", { text: "Resuscitation intervals" }, input),
+    E("p", {
+      class: "muted",
+      text: "Periods devoted to this patient’s resuscitation, excluding separately billed procedures and other patients.",
+    }),
+    preview,
+    E("button", {
+      class: "button primary",
+      text: "Use this pathway",
+      onclick: () => {
+        const ranges = T.ranges(input.value, state.facts.date, {
+          assume24: true,
+        });
+        if (!ranges.items.length || ranges.errors.length)
+          return toast("Enter valid care intervals.");
+        Object.assign(state.ctx.overrides, {
+          criticalTier: tier,
+          intervals: input.value,
+          exclusive: true,
+        });
+        $("#modal").close();
+        build({ requestAI: false });
+      },
+    }),
+  );
+}
 function render() {
-  const box = $("#draft-content");
-  const n = $("#note").value.length;
+  const box = $("#draft-content"),
+    n = $("#note").value.length;
   $("#note-count").textContent = n
     ? n.toLocaleString() + " characters · only in this tab"
     : "Your note stays in this tab.";
+  renderQuickContext();
   box.replaceChildren();
   if (!state.result) {
     box.append(
@@ -487,12 +741,8 @@ function render() {
         "div",
         { class: "empty-draft" },
         E("div", { class: "empty-symbol", text: "≡" }),
-        E("h3", { text: state.dirty ? "Note updated" : "No draft yet" }),
-        E("p", {
-          text: state.dirty
-            ? "Build again to check your changes."
-            : "Add a note, then build your draft.",
-        }),
+        E("h3", { text: "Start typing" }),
+        E("p", { text: "Your suggested bill will appear here." }),
         E("button", {
           class: "button secondary",
           text: "Find a code →",
@@ -514,58 +764,55 @@ function render() {
       "div",
       { class: "draft-meta" },
       E("span", {
-        class:
-          "tag " +
-          (r.blockers.length ? "red" : questions.length ? "amber" : "blue"),
+        class: "tag " + (r.blockers.length ? "red" : "blue"),
         text: r.blockers.length
-          ? "Resolve conflict"
-          : questions.length
-            ? questions.length +
-              " open " +
-              (questions.length === 1 ? "question" : "questions")
-            : "Review draft",
+          ? "Combination to resolve"
+          : state.savedOnly
+            ? "Saved draft"
+            : "Suggested bill",
       }),
-      f?.date ? E("span", { class: "tag", text: f.date }) : null,
-      f?.time
-        ? E("span", { class: "tag", text: f.time + " · physician time" })
+      state.semantic
+        ? E("span", { class: "tag", text: "AI interpreted" })
         : null,
     ),
-    E("div", {
-      class: "draft-title",
-      text: r.items.length
-        ? r.items.length + " " + (r.items.length === 1 ? "service" : "services")
-        : "Missing details",
-    }),
   );
   if (state.savedOnly)
     box.append(
       E("div", {
         class: "source-note",
-        text: "Restored billing draft. The clinical note was not stored. Paste it again to re-extract evidence and update the bill.",
+        text: "Saved codes. Paste the note to reinterpret this encounter.",
       }),
     );
   for (const [i, x] of r.items.entries()) {
-    const code = D.codes.find((c) => c.code === x.code);
+    const c = D.codes.find((c) => c.code === x.code),
+      isAssessment =
+        f?.assessment?.level &&
+        !r.critical &&
+        ["primary", "handover"].includes(f?.role) &&
+        x.code ===
+          V.assessment(f.date, f.time, f.assessment.level, state.ctx.holiday);
     box.append(
       E(
         "div",
-        { class: "service-row" },
-        E("span", {
-          class: "service-number",
-          text: String(i + 1).padStart(2, "0"),
-        }),
+        { class: "service-row " + (isAssessment ? "lead-service" : "") },
         E(
           "div",
           { class: "service-body" },
-          E("strong", { text: code?.label || x.reason || x.code }),
+          E("strong", {
+            text: isAssessment
+              ? labels[f.assessment.level]
+              : c?.label || x.reason || x.code,
+          }),
           E("small", {
-            text: x.timeUnits
-              ? x.timeUnits + " weighted time units · anaesthesia worksheet"
-              : x.units > 1
-                ? x.units + " units"
-                : x.manual
-                  ? "Added by you · source check required"
-                  : x.reason || "Restored from your shift",
+            text: isAssessment
+              ? f.assessment.reason || "Matched to the encounter and time band."
+              : x.timeUnits
+                ? x.timeUnits + " time units"
+                : x.units > 1
+                  ? x.units + " units"
+                  : x.manual
+                    ? "Added by you"
+                    : x.reason || "Saved draft",
           }),
         ),
         E("button", {
@@ -578,41 +825,108 @@ function render() {
       ),
     );
   }
-  for (const b of r.blockers) box.append(E("div", { class: "alert", text: b }));
-  if (questions.length && !state.savedOnly)
-    box.append(questionCard(questions[0], questions.length - 1));
-  const opportunities = r.opportunities || [];
-  if (opportunities.length && !state.savedOnly) {
-    const details = E(
-      "details",
-      {},
-      E("summary", {
-        text:
-          opportunities.length +
-          " additional " +
-          (opportunities.length === 1 ? "opportunity" : "opportunities") +
-          " to check",
+  const choices = assessmentChoices();
+  if (choices && !state.savedOnly) box.append(choices);
+  if (!r.items.length)
+    box.append(
+      E("p", {
+        class: "no-candidate",
+        text: "The services below need a little more detail.",
       }),
     );
-    for (const o of opportunities)
-      details.append(
-        E("h4", { text: o.title }),
-        E("p", { class: "small-row", text: o.detail }),
-        o.question
-          ? questionCard(o.question)
-          : E("button", {
-              class: "text-button",
-              text: "Read the relevant rules",
+  for (const b of r.blockers) box.append(E("div", { class: "alert", text: b }));
+  // Significant uncertainties refine the suggestion; they do not hide the rest of the bill.
+  if (questions.length && !state.savedOnly) {
+    const refining =
+      !state.semantic && !["error", "paused"].includes(state.ai.status);
+    box.append(
+      refining
+        ? E(
+            "details",
+            { class: "assessment-choices" },
+            E("summary", { text: "Refine details" }),
+            questionCard(questions[0], questions.length - 1),
+          )
+        : questionCard(questions[0], questions.length - 1),
+    );
+  }
+  const model = state.semantic
+    ? A.validate(state.semantic, $("#note").value.trim(), D).value
+    : null;
+  if (model?.work?.length)
+    box.append(
+      E(
+        "div",
+        { class: "understood-work" },
+        E("div", { class: "section-caption", text: "Work recognized" }),
+        E(
+          "div",
+          { class: "work-chips" },
+          model.work.map((w) =>
+            E("button", {
+              class: "work-chip " + w.certainty,
+              text:
+                w.label +
+                (w.certainty === "documented" ? "" : " · " + w.certainty),
               onclick: () =>
-                modal(o.title, ...(o.rule_ids || []).map(ruleNode)),
+                modal(
+                  w.label,
+                  E("span", { class: "tag", text: w.certainty }),
+                  E("blockquote", { text: w.quote }),
+                ),
             }),
+          ),
+        ),
+      ),
+    );
+  const opportunities = [
+    ...(model?.opportunities || []).map((o) => ({
+      ...o,
+      detail: o.detail,
+      model: true,
+    })),
+    ...(r.opportunities || []),
+  ]
+    .filter((o) => !(r.critical && o.pathway?.startsWith("critical_")))
+    .filter((o, i, a) => a.findIndex((x) => x.title === o.title) === i);
+  if (opportunities.length && !state.savedOnly) {
+    const area = E(
+      "div",
+      { class: "opportunity-area" },
+      E("div", { class: "section-caption", text: "Additional capture" }),
+    );
+    for (const o of opportunities.slice(0, 3))
+      area.append(
+        E(
+          "div",
+          { class: "capture-card" },
+          E("h3", { text: o.title }),
+          E("p", { text: o.detail }),
+          o.pathway?.startsWith("critical_") && !r.critical
+            ? E("button", {
+                class: "text-button",
+                text: "Build this option →",
+                onclick: () => criticalOption(o),
+              })
+            : null,
+          o.question
+            ? questionCard(o.question)
+            : o.quote
+              ? E(
+                  "details",
+                  {},
+                  E("summary", { text: "Why" }),
+                  E("blockquote", { text: o.quote }),
+                )
+              : null,
+        ),
       );
-    box.append(E("div", { class: "review-section" }, details));
+    box.append(area);
   }
   const evidence = E(
     "details",
     {},
-    E("summary", { text: "Evidence, exclusions & source checks" }),
+    E("summary", { text: "Evidence & checks" }),
   );
   for (const ev of f?.events || [])
     evidence.append(
@@ -625,52 +939,58 @@ function render() {
           (ev.actor === "other" ? "another physician" : ev.actor),
       }),
       E("blockquote", { text: ev.evidence }),
+      ev.timeAssumed
+        ? E("button", {
+            class: "text-button",
+            text: "Time: " + ev.time + " · from encounter · edit",
+            onclick: () => editServiceTime(ev),
+          })
+        : ev.time
+          ? E("button", {
+              class: "text-button",
+              text: "Time: " + ev.time + " · edit",
+              onclick: () => editServiceTime(ev),
+            })
+          : null,
     );
   for (const text of [...(r.excluded || []), ...(r.warnings || [])])
     evidence.append(E("div", { class: "small-row", text }));
-  if (!f?.events?.length && !r.excluded?.length && !r.warnings?.length)
-    evidence.append(
-      E("p", {
-        class: "small-row",
-        text: "Use each code’s details to review its requirements and source status.",
+  const valid = r.items.length > 0 && !r.blockers.length;
+  evidence.append(
+    E(
+      "label",
+      { class: "review-check" },
+      E("input", {
+        type: "checkbox",
+        checked: state.reviewed,
+        disabled: !valid || questions.length > 0,
+        "aria-label": "Mark this draft reviewed",
+        onchange: (e) => {
+          state.reviewed = e.target.checked;
+        },
       }),
-    );
-  box.append(E("div", { class: "review-section" }, evidence));
-  const valid = r.items.length > 0 && !r.blockers.length && !questions.length;
-  const check = E("input", {
-    type: "checkbox",
-    checked: state.reviewed,
-    disabled: !valid,
-    "aria-label": "I reviewed the codes, source requirements, roles and times",
-    onchange: (e) => {
-      state.reviewed = e.target.checked;
-      render();
-    },
-  });
+      "Mark this draft reviewed",
+    ),
+  );
   box.append(
+    E("div", { class: "review-section" }, evidence),
     E(
       "div",
       { class: "draft-actions" },
-      E(
-        "label",
-        { class: "review-check" },
-        check,
-        "Codes, source requirements, roles and times checked.",
-      ),
       E(
         "div",
         { class: "action-row" },
         E("button", {
           class: "button primary",
-          text: state.reviewed ? "Save reviewed draft" : "Save for review",
-          disabled: !r.items.length,
-          onclick: saveEncounter,
+          text: "Copy codes",
+          disabled: !valid,
+          onclick: () => copyText(r.line),
         }),
         E("button", {
           class: "button secondary",
-          text: "Copy codes",
-          disabled: !valid || !state.reviewed,
-          onclick: () => copyText(r.line),
+          text: "Save draft",
+          disabled: !r.items.length,
+          onclick: saveEncounter,
         }),
         E("button", {
           class: "text-button",
@@ -681,14 +1001,6 @@ function render() {
           },
         }),
       ),
-      E("p", {
-        class: "draft-footnote",
-        text: state.savedOnly
-          ? "Notes and quoted evidence are intentionally absent from saved drafts."
-          : "Rule-based extraction · " +
-            Math.round(state.elapsed || 0) +
-            " ms · No model or remote note request. Review the chart for work this parser may miss.",
-      }),
     ),
     sourceNote(),
   );
@@ -697,9 +1009,8 @@ function saveEncounter() {
   if (!state.result?.items.length) return;
   let ref = $("#reference").value.trim();
   if (!ref) {
-    $("#reference").focus();
-    toast("Give this encounter a local reference before saving.");
-    return;
+    ref = defaultReference();
+    $("#reference").value = ref;
   }
   if (state.result.blockers.length && state.reviewed) {
     toast("Resolve the conflicting codes before marking this reviewed.");
@@ -806,7 +1117,12 @@ function renderSidebar() {
   );
 }
 function openEncounter(id) {
+  interpreter?.cancel();
+  clearTimeout(semanticTimer);
+  clearTimeout(liveTimer);
   remember();
+  state.semantic = null;
+  state.clock = null;
   const memo = state.session.get(id);
   const row =
     state.ledger.find((x) => x.encounterId === id) ||
@@ -829,6 +1145,9 @@ function openEncounter(id) {
   $("#reference").value = row.reference;
   $("#note").value = memo?.note || "";
   if (memo) {
+    state.clock = memo.clock;
+    state.semantic = memo.semantic || null;
+    state.semanticMs = memo.semanticMs;
     state.ctx = structuredClone(memo.ctx);
     state.manual = structuredClone(memo.manual);
     state.removed = [...memo.removed];
@@ -1063,7 +1382,7 @@ function showSources() {
         " rule cards from your FastBill v3 package.",
     }),
     E("p", {
-      text: "The app runs the supplied FastBill rules locally. It is a focused ED billing library, not the full OHIP Schedule. Rule-based extraction can miss clinical language; compare the draft with the actual encounter.",
+      text: "A local language model interprets the encounter and suggests additional work. The supplied FastBill rules map recognized services to this focused ED billing catalogue. Source status remains visible on each rule.",
     }),
     E("div", { class: "alert", text: D.metadata.source_note }),
     E("p", {
@@ -1078,7 +1397,7 @@ function privacy() {
   modal(
     "Storage & privacy",
     E("p", {
-      text: "Clinical text is parsed in this browser. Folio makes no model request and does not send the note to a billing server, analytics service or AI provider.",
+      text: "Clinical text is interpreted on this device. A Qwen3 4B model runs in a background browser worker; notes are never sent to a billing server, analytics service or AI provider. The first use downloads model files from Hugging Face and the WebLLM project, then caches them in this browser. Local AI requires WebGPU; immediate billing suggestions remain available while it loads or if it is unavailable.",
     }),
     E("h3", { text: "Only in this tab" }),
     E("p", {
@@ -1150,25 +1469,16 @@ function manualDialog(c, item) {
     step: 1,
     value: item?.units || 1,
   });
-  const confirm = E("input", { type: "checkbox" });
   modal(
     c.code + " · " + c.label,
     E("p", {
-      text: "A library match does not establish that the code is payable. Confirm the service, provider role, current preamble and units.",
+      text: "Add this service to the draft. Adjust the units below.",
     }),
     E("label", { text: "Units" }, units),
-    E(
-      "label",
-      { class: "check-label" },
-      confirm,
-      "I performed this service and checked the applicable code requirements.",
-    ),
     E("button", {
       class: "button primary",
       text: item ? "Update line" : "Add candidate",
       onclick: () => {
-        if (!confirm.checked)
-          return toast("Confirm the code requirements first.");
         const value = Number(units.value);
         if (!Number.isInteger(value) || value < 1 || value > 999)
           return toast("Use whole units from 1 to 999.");
@@ -1177,7 +1487,7 @@ function manualDialog(c, item) {
           code: c.code,
           units: value,
           manual: true,
-          reason: "Added by clinician after source review",
+          reason: "Added by you",
           rule_ids: c.rule_ids,
         });
         state.removed = state.removed.filter((x) => x !== c.code);
@@ -1500,6 +1810,8 @@ window.addEventListener("storage", (e) => {
     toast("Could not read the shift update from another tab.");
   }
 });
+initInterpreter();
+syncInputs();
 render();
 renderSidebar();
 navigate(location.hash.slice(1) || "build");
@@ -1554,3 +1866,43 @@ try {
 } catch {
   /* Malformed legacy records remain untouched. */
 }
+
+$("#ai-status").onclick = () =>
+  modal(
+    "On-device interpretation",
+    E("p", {
+      text:
+        (state.ai.message ||
+          "The model loads automatically with your first note.") +
+        (state.semanticMs
+          ? " · Last interpretation " +
+            (state.semanticMs / 1000).toFixed(1) +
+            " s"
+          : ""),
+    }),
+    E("p", {
+      text: "Qwen3 4B runs in a background worker on your device. The first use downloads its model files; later visits use the browser cache. Your note is never sent to a model provider.",
+    }),
+    E("button", {
+      class: "button primary",
+      text: "Retry local AI",
+      onclick: () => {
+        interpreter?.restart();
+        updateAI({
+          status: "idle",
+          message: "Restarting local AI with cached model files.",
+        });
+        scheduleSemantic();
+        $("#modal").close();
+      },
+    }),
+    E("button", {
+      class: "text-button",
+      text: "Pause AI",
+      onclick: () => {
+        interpreter?.pause();
+        updateAI({ status: "paused", message: "Local AI paused" });
+        $("#modal").close();
+      },
+    }),
+  );

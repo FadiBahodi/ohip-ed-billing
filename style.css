@@ -1695,3 +1695,184 @@ h1 {
   gap: 18px;
   border-bottom: 1px solid var(--line);
 }
+
+/* Live suggestions keep the note stable and put the proposed bill first. */
+.quick-context {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 15px 24px 0;
+}
+.context-chip {
+  border: 1px solid #e3e8f5;
+  background: #f8faff;
+  color: #4b6098;
+  border-radius: 6px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+.context-chip:hover {
+  border-color: var(--blue);
+}
+.context-zone {
+  font-size: 10px;
+  color: var(--muted);
+}
+.lead-service {
+  align-items: start;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  background: linear-gradient(90deg, #fafbff, white);
+}
+.lead-service .service-body strong {
+  font-size: 17px;
+}
+.lead-service .service-body small {
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 360px;
+}
+.lead-service .code-chip {
+  font-size: 20px;
+  letter-spacing: -0.5px;
+  padding: 8px 10px;
+}
+.assessment-choices {
+  padding: 0 24px 18px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.assessment-choices summary {
+  cursor: pointer;
+}
+.assessment-choices .options {
+  margin-top: 12px;
+}
+.option.selected {
+  border-color: var(--blue);
+  background: var(--pale);
+  color: var(--blue);
+}
+.section-caption {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7b879e;
+  margin-bottom: 12px;
+}
+.understood-work,
+.opportunity-area {
+  border-top: 1px solid var(--line);
+  padding: 18px 24px;
+}
+.work-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.work-chip {
+  font-size: 11px;
+  text-align: left;
+  line-height: 1.5;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--wash);
+  padding: 7px 9px;
+}
+.work-chip.inferred,
+.work-chip.possible {
+  border-style: dashed;
+  background: #fbfcff;
+  color: #5d6e93;
+}
+.capture-card + .capture-card {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.capture-card h3 {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+.capture-card p {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.65;
+}
+.capture-card > details {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.capture-card .question-section {
+  margin: 12px 0 0;
+  padding: 12px;
+}
+.no-candidate {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 15px 24px;
+}
+.build-row #build {
+  background: white;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  box-shadow: none;
+  font-size: 12px;
+  padding: 8px 12px;
+}
+.build-row {
+  justify-content: space-between;
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+.build-row #ai-status {
+  font-size: 11px;
+  text-align: right;
+  max-width: 70%;
+}
+.build-row #ai-status[data-status="loading"],
+.build-row #ai-status[data-status="thinking"] {
+  color: var(--blue);
+}
+.draft-actions .primary {
+  min-width: 120px;
+}
+.question-section {
+  background: #fafbfe;
+  border-color: var(--line);
+}
+.question-section .question-label {
+  font-size: 9px;
+  color: var(--muted);
+}
+@media (max-width: 700px) {
+  .quick-context {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .lead-service .service-body strong {
+    font-size: 16px;
+  }
+  .lead-service .code-chip {
+    font-size: 19px;
+  }
+  .page-heading > .new-encounter {
+    max-width: none;
+    white-space: nowrap;
+    font-size: 11px;
+  }
+  .understood-work,
+  .opportunity-area {
+    padding: 16px 20px;
+  }
+}
+
+@media (max-width: 700px) {
+  textarea#note {
+    height: 180px;
+    min-height: 180px;
+  }
+}
