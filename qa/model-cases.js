@@ -1,4 +1,8 @@
 export const CASES = [
+  {id: "tachy-g-code", note: "29 year old female, nausea vomiting headache. i gave her fluids because tachy. critical G code 25 minute r/a x2.", tier: "other", services: [], expectedMinutes: 25, estimated: true},
+  {id: "fluids-reassessment", note: "29F vomiting, tachycardic. Gave fluid boluses and reassessed perfusion twice.", tier: "other", services: [], estimated: true},
+  {id: "oral-hydration", note: "Mild tachycardia after walking, settled with rest. Drinking water, no treatment needed.", tier: "none", services: []},
+  {id: "no-critical-care", note: "Headache, fluids and metoclopramide. No critical care. Felt better and discharged.", tier: "none", services: []},
   {
     id: "sparse",
     note: "27 year old female, chest pain, 25 minutes.",

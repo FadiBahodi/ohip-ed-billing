@@ -1,15 +1,16 @@
 // src/semantic.js
 var LocalInterpreter = class {
-  constructor({ onStatus, onResult, onError, model }) {
+  constructor({ onStatus, onResult, onError, model, pipeline }) {
     this.handlers = { onStatus, onResult, onError };
     this.worker = null;
     this.id = 0;
     this.model = model;
+    this.pipeline = pipeline;
   }
   ensure() {
     if (this.worker) return;
     this.worker = new Worker(
-      new URL("./semantic-worker.js?v=1.2.2", import.meta.url),
+      new URL("./semantic-worker.js?v=1.3.0", import.meta.url),
       {
         type: "module"
       }
@@ -25,7 +26,7 @@ var LocalInterpreter = class {
       message: e.message || "Local model failed to start."
     });
   }
-  analyze(note, catalog, candidates = []) {
+  analyze(note, catalog, candidates = [], options = {}) {
     this.ensure();
     const id = ++this.id;
     this.worker.postMessage({
@@ -34,9 +35,14 @@ var LocalInterpreter = class {
       note,
       catalog,
       candidates,
-      model: this.model
+      model: this.model,
+      pipeline: options.pipeline || this.pipeline
     });
     return id;
+  }
+  warmup(catalog = []) {
+    this.ensure();
+    this.worker.postMessage({ type: "init", model: this.model, catalog });
   }
   cancel() {
     this.id++;

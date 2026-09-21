@@ -10,9 +10,9 @@ class Handler(SimpleHTTPRequestHandler):
         size=int(self.headers.get('Content-Length','0'))
         if not 0<size<2000000: self.send_error(400);return
         body=json.loads(self.rfile.read(size)); model=body.get('model','')
-        allowed={'sparse','colloquial-repair','shock-estimate','interrupted-resus','respiratory','negative-procedure','stable-long-stay','reassessment','pressor-shorthand','waiting-for-ride','face-repair','sedation-role'}
+        allowed={'sparse','colloquial-repair','shock-estimate','interrupted-resus','respiratory','negative-procedure','stable-long-stay','reassessment','pressor-shorthand','waiting-for-ride','face-repair','sedation-role','tachy-g-code','fluids-reassessment','oral-hydration','no-critical-care'}
         if not re.fullmatch(r'Qwen3(?:\.5)?-[24]B-q4f16_1-MLC',model) or not all(r.get('fixture') in allowed for r in body.get('results',[])): self.send_error(400);return
-        dest=ROOT/'qa'/'results';dest.mkdir(exist_ok=True)
+        dest=ROOT/'qa'/'results'/'latency-pass';dest.mkdir(exist_ok=True,parents=True)
         (dest/(model+'.json')).write_text(json.dumps(body,indent=2))
         self.send_response(204);self.end_headers()
 ThreadingHTTPServer(('127.0.0.1',8772),Handler).serve_forever()

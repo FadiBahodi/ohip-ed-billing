@@ -1,6 +1,10 @@
-# Folio 1.2 verification
+# Folio verification
 
-## Software and calculation
+## Folio 1.3
+
+`npm test`: 55 passing tests. See `qa/LATENCY_EVALUATION.md` for measured speed, the exact G-code regression, direct clock editing, pending-model interaction, save/reload and narrow-screen verification. The final 4B interpretation plus calculator passes all sixteen scoped cases. Public release freshness is checked after publication.
+
+## Folio 1.2 software and calculation
 
 `npm test`: 45 passing tests at the time of the release checks. These cover clock defaults, the reported H133 example, clinician overrides, note chronology, semantic procedures, facial-site mapping, critical-care reconstruction, interval subtraction and merging, units, time-premium selection, reassessment spacing, sedation attribution, source-bundle references, backup/CSV provenance, stale model rejection and worker lifecycle.
 

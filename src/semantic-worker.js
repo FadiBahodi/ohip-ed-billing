@@ -1,3 +1,10 @@
+import {
+  FAST_PROMPT,
+  FAST_EXAMPLES,
+  fastSchema,
+  expandPlan,
+  fastNote,
+} from "./semantic-fast.js";
 import { INSTRUCTIONS } from "./semantic-prompt.js";
 import { schema } from "./semantic-contract.js";
 import {
@@ -82,16 +89,16 @@ let engine,
   generating = false,
   paused = false;
 const send = (type, data = {}) => postMessage({ type, ...data });
-async function initialize() {
+async function initialize(warmCatalog) {
   if (loading) return loading;
   loading = (async () => {
     if (!self.navigator.gpu)
       throw Error(
-        "This browser does not expose WebGPU. Open Folio in Chrome or Edge for the on-device model.",
+        "This browser does not expose WebGPU. Use a WebGPU-capable browser for local AI.",
       );
     send("status", {
       status: "loading",
-      message: "Downloading local AI · first use only",
+      message: "Preparing local AI · cached files are reused",
     });
     const record = prebuiltAppConfig.model_list.find(
       (x) => x.model_id === MODEL,
@@ -106,6 +113,35 @@ async function initialize() {
         }),
     });
     await engine.reload(MODEL, { context_window_size: 4096 });
+    if (warmCatalog?.length) {
+      send("status", {
+        status: "loading",
+        progress: 1,
+        message: "Preparing interpretation cache…",
+      });
+      // Prime the reusable grammar before the first clinical note. One output
+      // token is enough; the synthetic request is never stored or displayed.
+      await engine.chat.completions.create({
+        messages: [
+          {
+            role: "system",
+            content:
+              FAST_PROMPT +
+              warmCatalog.map((x) => x.id).join(", ") +
+              "\n/no_think",
+          },
+          ...FAST_EXAMPLES,
+          { role: "user", content: "[S1] No clinical encounter entered." },
+        ],
+        temperature: 0,
+        max_tokens: 1,
+        extra_body: { enable_thinking: false },
+        response_format: {
+          type: "json_object",
+          schema: JSON.stringify(fastSchema(warmCatalog, { S0: "", S1: "" })),
+        },
+      });
+    }
     send("status", {
       status: "ready",
       message: "Local AI ready",
@@ -125,7 +161,7 @@ function prompt(catalog) {
     "\n/no_think"
   );
 }
-async function infer(job, note) {
+async function inferLegacy(job, note) {
   const passages = evidencePassages(note);
   generating = true;
   const response = await engine.chat.completions.create({
@@ -257,6 +293,72 @@ async function infer(job, note) {
   interpretation = await reviewWork(job, note, passages, interpretation);
   return { interpretation, usage };
 }
+async function infer(job, note) {
+  if (job.pipeline === "legacy") return inferLegacy(job, note);
+  const passages = evidencePassages(note);
+  generating = true;
+  const started = performance.now();
+  const response = await engine.chat.completions.create({
+    stream: true,
+    stream_options: { include_usage: true },
+    messages: [
+      {
+        role: "system",
+        content:
+          FAST_PROMPT + job.catalog.map((x) => x.id).join(", ") + "\n/no_think",
+      },
+      ...FAST_EXAMPLES,
+      {
+        role: "user",
+        content: fastNote(passages),
+      },
+    ],
+    temperature: 0,
+    max_tokens: 900,
+    extra_body: { enable_thinking: false },
+    response_format: {
+      type: "json_object",
+      schema: JSON.stringify(fastSchema(job.catalog, passages)),
+    },
+  });
+  let content = "",
+    finish,
+    usage,
+    firstTokenMs;
+  for await (const chunk of response) {
+    const delta = chunk.choices[0]?.delta?.content || "";
+    if (delta && firstTokenMs === undefined)
+      firstTokenMs = performance.now() - started;
+    content += delta;
+    finish = chunk.choices[0]?.finish_reason || finish;
+    if (chunk.usage) usage = chunk.usage;
+  }
+  generating = false;
+  if (finish !== "stop")
+    throw Error("Interpretation was interrupted or exceeded the output limit.");
+  let interpretation = expandPlan(
+    parseInterpretation(content),
+    passages,
+    job.catalog,
+  );
+  // Only procedure-bearing notes need attribution review. Ordinary encounters
+  // and timed care avoid the old always-on follow-up pass.
+  if (
+    interpretation.services.length ||
+    job.candidates?.some((s) => s.anaesthesia === "sedation")
+  )
+    interpretation = await reviewWork(
+      job,
+      note,
+      passages,
+      interpretation,
+      true,
+    );
+  return {
+    interpretation,
+    usage: { ...usage, firstTokenMs, pipeline: "compact" },
+  };
+}
 async function shortTask(messages, schema, limit = 300) {
   generating = true;
   const response = await engine.chat.completions.create({
@@ -278,7 +380,7 @@ async function shortTask(messages, schema, limit = 300) {
     throw Error("Local work check was interrupted (" + finish + ").");
   return parseInterpretation(content);
 }
-async function reviewWork(job, note, passages, result) {
+async function reviewWork(job, note, passages, result, proceduresOnly = false) {
   const services = [];
   const candidates = [
     ...result.services,
@@ -347,6 +449,7 @@ async function reviewWork(job, note, passages, result) {
   }
   result.services = services;
   if (
+    !proceduresOnly &&
     result.care.tier === "none" &&
     (note.match(/\b\d{1,2}:\d{2}\b/g) || []).length > 1 &&
     !pending &&
@@ -416,7 +519,7 @@ async function drain() {
             message:
               chunks.length > 1
                 ? `Reading section ${i + 1} of ${chunks.length}…`
-                : "Reading the encounter…",
+                : "Interpreting work…",
           });
           const result = await infer(job, chunks[i]);
           parts.push(result.interpretation);
@@ -457,7 +560,8 @@ self.onmessage = (event) => {
     drain();
   } else if (msg.type === "init") {
     paused = false;
-    initialize().catch(() => {});
+    if (!engine && ALLOWED_MODELS.includes(msg.model)) MODEL = msg.model;
+    initialize(msg.catalog).catch(() => {});
   } else if (msg.type === "cancel") {
     pending = null;
     if (generating && engine) engine.interruptGenerate();

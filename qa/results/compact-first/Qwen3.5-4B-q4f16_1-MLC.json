@@ -1,0 +1,388 @@
+{
+  "model": "Qwen3.5-4B-q4f16_1-MLC",
+  "finished": false,
+  "coldWallMs": 76611,
+  "results": [
+    {
+      "fixture": "tachy-g-code",
+      "model": "Qwen3.5-4B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "minutes": true,
+        "services": true,
+        "actor": true,
+        "estimate": true
+      },
+      "errors": [],
+      "elapsed": 9080.800000011921,
+      "wallMs": 12434,
+      "interpretation": {
+        "assessment": {
+          "level": "none",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "29 year old female, nausea vomiting headache. i gave her fluids because tachy. critical G code 25 minute r/a x2."
+        },
+        "care": {
+          "tier": "other",
+          "reason": "25 minute critical care episode",
+          "quote": "29 year old female, nausea vomiting headache. i gave her fluids because tachy. critical G code 25 minute r/a x2.",
+          "episodes": [
+            {
+              "label": "Excluded interval",
+              "quote": "critical G code 25 minute r/a x2.",
+              "start": "00:00",
+              "end": "25",
+              "minutes": 25,
+              "kind": "excluded",
+              "timing": "documented"
+            }
+          ]
+        },
+        "services": [],
+        "reassessments": [
+          {
+            "time": "25",
+            "quote": "critical G code 25 minute r/a x2.",
+            "reason": "Repeat assessment with further care.",
+            "newCare": true,
+            "dispositionOnly": false
+          }
+        ],
+        "work": [
+          {
+            "label": "25 minute critical care episode",
+            "quote": "critical G code 25 minute r/a x2.",
+            "certainty": "inferred"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 189,
+        "prompt_tokens": 707,
+        "total_tokens": 896,
+        "extra": {
+          "e2e_latency_s": 9.079,
+          "prefill_tokens_per_s": 274.6057640028108,
+          "decode_tokens_per_s": 29.19459977240763,
+          "time_to_first_token_s": 2.5745999999940397,
+          "time_per_output_token_s": 0.03425291005171165,
+          "grammar_init_s": 0.3812000000178814,
+          "grammar_per_token_s": 7.407407360102157e-05
+        },
+        "firstTokenMs": 2577.199999988079,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "fluids-reassessment",
+      "model": "Qwen3.5-4B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true,
+        "estimate": false
+      },
+      "errors": [],
+      "elapsed": 6648.199999988079,
+      "wallMs": 6650.200000017881,
+      "interpretation": {
+        "assessment": {
+          "level": "none",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "29F vomiting, tachycardic. Gave fluid boluses and reassessed perfusion twice."
+        },
+        "care": {
+          "tier": "other",
+          "reason": "fluid bolus",
+          "quote": "29F vomiting, tachycardic. Gave fluid boluses and reassessed perfusion twice.",
+          "episodes": [
+            {
+              "label": "fluid bolus",
+              "quote": "Gave fluid boluses and reassessed perfusion twice.",
+              "start": "00:00",
+              "end": "00:00",
+              "minutes": 0,
+              "kind": "care",
+              "timing": "documented"
+            }
+          ]
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "fluid bolus",
+            "quote": "Gave fluid boluses and reassessed perfusion twice.",
+            "certainty": "inferred"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 136,
+        "prompt_tokens": 695,
+        "total_tokens": 831,
+        "extra": {
+          "e2e_latency_s": 6.648,
+          "prefill_tokens_per_s": 327.8920551056588,
+          "decode_tokens_per_s": 30.14184397222847,
+          "time_to_first_token_s": 2.1195999999940396,
+          "time_per_output_token_s": 0.033176470587577896,
+          "grammar_init_s": 0.0472000000178814,
+          "grammar_per_token_s": 5.735294104498974e-05
+        },
+        "firstTokenMs": 2119.9000000059605,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "oral-hydration",
+      "model": "Qwen3.5-4B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 5912.4000000059605,
+      "wallMs": 5915.4000000059605,
+      "interpretation": {
+        "assessment": {
+          "level": "none",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "Mild tachycardia after walking, settled with rest. Drinking water, no treatment needed."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "Mild tachycardia after walking, settled with rest. Drinking water, no treatment needed.",
+          "episodes": []
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "minor: laceration",
+            "quote": "Mild tachycardia after walking, settled with rest.",
+            "certainty": "documented"
+          },
+          {
+            "label": "minor: abscess",
+            "quote": "Drinking water, no treatment needed.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 100,
+        "prompt_tokens": 690,
+        "total_tokens": 790,
+        "extra": {
+          "e2e_latency_s": 5.912,
+          "prefill_tokens_per_s": 329.60733734500593,
+          "decode_tokens_per_s": 26.366440795897528,
+          "time_to_first_token_s": 2.0934000000059605,
+          "time_per_output_token_s": 0.03792699999749661,
+          "grammar_init_s": 9.999999403953553e-05,
+          "grammar_per_token_s": 0.0001860000014305115
+        },
+        "firstTokenMs": 2093.5999999940395,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "no-critical-care",
+      "model": "Qwen3.5-4B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 4598.0999999940395,
+      "wallMs": 4600.5999999940395,
+      "interpretation": {
+        "assessment": {
+          "level": "none",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "Headache, fluids and metoclopramide. No critical care. Felt better and discharged."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "Headache, fluids and metoclopramide. No critical care. Felt better and discharged.",
+          "episodes": []
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "minor headache management",
+            "quote": "Headache, fluids and metoclopramide.",
+            "certainty": "inferred"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 78,
+        "prompt_tokens": 697,
+        "total_tokens": 775,
+        "extra": {
+          "e2e_latency_s": 4.598,
+          "prefill_tokens_per_s": 324.3218091303025,
+          "decode_tokens_per_s": 31.985565487300477,
+          "time_to_first_token_s": 2.1490999999940397,
+          "time_per_output_token_s": 0.03126410256517238,
+          "grammar_init_s": 0.0462999999821186,
+          "grammar_per_token_s": 7.820512889287406e-05
+        },
+        "firstTokenMs": 2149.800000011921,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "sparse",
+      "model": "Qwen3.5-4B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 4762.799999982119,
+      "wallMs": 4764.0999999940395,
+      "interpretation": {
+        "assessment": {
+          "level": "multisystem",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "27 year old female, chest pain, 25 minutes."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "27 year old female, chest pain, 25 minutes.",
+          "episodes": []
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "25 min chest pain assessment",
+            "quote": "27 year old female, chest pain, 25 minutes.",
+            "certainty": "inferred"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 86,
+        "prompt_tokens": 683,
+        "total_tokens": 769,
+        "extra": {
+          "e2e_latency_s": 4.763,
+          "prefill_tokens_per_s": 323.7273675211588,
+          "decode_tokens_per_s": 32.537550601697035,
+          "time_to_first_token_s": 2.109800000011921,
+          "time_per_output_token_s": 0.030733720931895955,
+          "grammar_init_s": 0.04960000002384186,
+          "grammar_per_token_s": 5.9302325512087624e-05
+        },
+        "firstTokenMs": 2110.199999988079,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "colloquial-repair",
+      "model": "Qwen3.5-4B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": false,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 6986.5999999940395,
+      "wallMs": 6989.0999999940395,
+      "interpretation": {
+        "assessment": {
+          "level": "minor",
+          "reason": "Focused assessment.",
+          "quote": "I washed out the 3 cm forearm cut and closed it with five nylon stitches under local lidocaine. Good approximation."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "I washed out the 3 cm forearm cut and closed it with five nylon stitches under local lidocaine. Good approximation.",
+          "episodes": []
+        },
+        "services": [
+          {
+            "service": "laceration",
+            "actor": "other",
+            "status": "performed",
+            "quote": "I washed out the 3 cm forearm cut and closed it with five nylon stitches under local lidocaine.",
+            "site": "forearm",
+            "length_cm": 3,
+            "anaesthesia": "local",
+            "purpose": "unknown"
+          }
+        ],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Laceration washout and closure",
+            "quote": "I washed out the 3 cm forearm cut and closed it with five nylon stitches under local lidocaine.",
+            "certainty": "inferred"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 157,
+        "prompt_tokens": 697,
+        "total_tokens": 854,
+        "extra": {
+          "e2e_latency_s": 6.986,
+          "prefill_tokens_per_s": 334.34067252073953,
+          "decode_tokens_per_s": 32.15236534975932,
+          "time_to_first_token_s": 2.084699999988079,
+          "time_per_output_token_s": 0.031101910827455986,
+          "grammar_init_s": 0.008,
+          "grammar_per_token_s": 7.133757878261022e-05
+        },
+        "firstTokenMs": 2085,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "shock-estimate",
+      "model": "Qwen3.5-4B-q4f16_1-MLC",
+      "checks": {
+        "valid": false,
+        "tier": false,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true,
+        "estimate": false
+      },
+      "errors": [
+        "Interpretation was interrupted or exceeded the output limit."
+      ],
+      "wallMs": 35139.80000001192
+    }
+  ]
+}

@@ -435,7 +435,7 @@
       critMention =
         gMention ||
         active.some((s) =>
-          /critical\s+care|resus(?:citation)?\s+time|fully\s+devoted/i.test(
+          /critical\s+care|(?:critical\s+)?G[ -]?code|resus(?:citation)?\s+time|fully\s+devoted/i.test(
             s.text,
           ),
         );
@@ -467,7 +467,7 @@
     if (critMention) {
       let cl = active
         .filter((s) =>
-          /\b(?:G395|G391|G521|G523|G522|critical\s+care|resus(?:citation)?\s+time|exclusive)\b/i.test(
+          /\b(?:G395|G391|G521|G523|G522|critical\s+care|(?:critical\s+)?G[ -]?code|resus(?:citation)?\s+time|exclusive)\b/i.test(
             s.text,
           ),
         )

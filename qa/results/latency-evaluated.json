@@ -1,0 +1,529 @@
+{
+  "baseline": {
+    "model": "Qwen3.5-4B-q4f16_1-MLC",
+    "cases": 12,
+    "medianSeconds": 13.983199999988079
+  },
+  "runs": [
+    {
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "finished": true,
+      "passed": 11,
+      "total": 16,
+      "medianSeconds": 5.785799999997019,
+      "commonMedianSeconds": 6.2742499999850985,
+      "commonCases": 12,
+      "rows": [
+        {
+          "id": "tachy-g-code",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "minutes": true,
+            "estimated": true
+          },
+          "seconds": 5.544599999994039,
+          "codes": "G395 + G391 + H114",
+          "criticalMinutes": 25,
+          "grammarSeconds": 3.4084000000059604,
+          "decodeTokens": 80
+        },
+        {
+          "id": "fluids-reassessment",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "estimated": true
+          },
+          "seconds": 6.0635,
+          "codes": "G395 + H114",
+          "criticalMinutes": 15,
+          "grammarSeconds": 3.1073999999761583,
+          "decodeTokens": 61
+        },
+        {
+          "id": "oral-hydration",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 2.4600999999940396,
+          "codes": "H133",
+          "criticalMinutes": null,
+          "grammarSeconds": 0,
+          "decodeTokens": 41
+        },
+        {
+          "id": "no-critical-care",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 2.3584000000059606,
+          "codes": "H133",
+          "criticalMinutes": null,
+          "grammarSeconds": 0.007199999988079071,
+          "decodeTokens": 39
+        },
+        {
+          "id": "sparse",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 5.565900000005961,
+          "codes": "H133",
+          "criticalMinutes": null,
+          "grammarSeconds": 3.1269000000059606,
+          "decodeTokens": 38
+        },
+        {
+          "id": "colloquial-repair",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 3.109300000011921,
+          "codes": "H131 + Z176 + E412",
+          "criticalMinutes": null,
+          "grammarSeconds": 0.009,
+          "decodeTokens": 72
+        },
+        {
+          "id": "shock-estimate",
+          "pass": false,
+          "checks": {
+            "structure": true,
+            "tier": false,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "estimated": true
+          },
+          "seconds": 9.198400000005961,
+          "codes": "G395 + H114",
+          "criticalMinutes": 15,
+          "grammarSeconds": 3.1347000000178813,
+          "decodeTokens": 189
+        },
+        {
+          "id": "interrupted-resus",
+          "pass": false,
+          "checks": {
+            "structure": true,
+            "tier": false,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "minutes": false
+          },
+          "seconds": 7.852900000005961,
+          "codes": "G395",
+          "criticalMinutes": 15,
+          "grammarSeconds": 3.096699999988079,
+          "decodeTokens": 134
+        },
+        {
+          "id": "respiratory",
+          "pass": false,
+          "checks": {
+            "structure": true,
+            "tier": false,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "minutes": true
+          },
+          "seconds": 12.027699999988078,
+          "codes": "G521 + G523 + G522 + H112",
+          "criticalMinutes": 33,
+          "grammarSeconds": 3.098899999976158,
+          "decodeTokens": 308
+        },
+        {
+          "id": "negative-procedure",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 5.66740000000596,
+          "codes": "H131",
+          "criticalMinutes": null,
+          "grammarSeconds": 3.1399000000059605,
+          "decodeTokens": 39
+        },
+        {
+          "id": "stable-long-stay",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 2.2997000000178813,
+          "codes": "H133",
+          "criticalMinutes": null,
+          "grammarSeconds": 0.023199999988079072,
+          "decodeTokens": 23
+        },
+        {
+          "id": "reassessment",
+          "pass": false,
+          "checks": {
+            "structure": true,
+            "tier": false,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "reassessment": false
+          },
+          "seconds": 7.557699999988079,
+          "codes": "G395",
+          "criticalMinutes": 15,
+          "grammarSeconds": 3.353899999976158,
+          "decodeTokens": 107
+        },
+        {
+          "id": "pressor-shorthand",
+          "pass": false,
+          "checks": {
+            "structure": true,
+            "tier": false,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "minutes": true,
+            "estimated": true
+          },
+          "seconds": 7.063899999976158,
+          "codes": "G395 + G391 + H114",
+          "criticalMinutes": 20,
+          "grammarSeconds": 3.237300000011921,
+          "decodeTokens": 92
+        },
+        {
+          "id": "waiting-for-ride",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 2.568699999988079,
+          "codes": "H133",
+          "criticalMinutes": null,
+          "grammarSeconds": 0.00009999999403953553,
+          "decodeTokens": 41
+        },
+        {
+          "id": "face-repair",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 6.644299999982119,
+          "codes": "H131 + Z154 + E412",
+          "criticalMinutes": null,
+          "grammarSeconds": 3.225,
+          "decodeTokens": 71
+        },
+        {
+          "id": "sedation-role",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 5.904199999988079,
+          "codes": "",
+          "criticalMinutes": null,
+          "grammarSeconds": 3.2325,
+          "decodeTokens": 47
+        }
+      ]
+    },
+    {
+      "model": "Qwen3.5-4B-q4f16_1-MLC",
+      "finished": true,
+      "passed": 16,
+      "total": 16,
+      "medianSeconds": 8.253100000008942,
+      "commonMedianSeconds": 8.269550000011922,
+      "commonCases": 12,
+      "rows": [
+        {
+          "id": "tachy-g-code",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "minutes": true,
+            "estimated": true
+          },
+          "seconds": 9.68480000001192,
+          "codes": "G395 + G391 + H114",
+          "criticalMinutes": 25,
+          "grammarSeconds": 3.4095,
+          "decodeTokens": 132
+        },
+        {
+          "id": "fluids-reassessment",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "estimated": true
+          },
+          "seconds": 6.90140000000596,
+          "codes": "G395 + G391 + H114",
+          "criticalMinutes": 30,
+          "grammarSeconds": 0.00010000002384185791,
+          "decodeTokens": 75
+        },
+        {
+          "id": "oral-hydration",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 6.557199999988079,
+          "codes": "H133",
+          "criticalMinutes": null,
+          "grammarSeconds": 0,
+          "decodeTokens": 66
+        },
+        {
+          "id": "no-critical-care",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 5.6855,
+          "codes": "H133",
+          "criticalMinutes": null,
+          "grammarSeconds": 0,
+          "decodeTokens": 41
+        },
+        {
+          "id": "sparse",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 5.537299999982118,
+          "codes": "H133",
+          "criticalMinutes": null,
+          "grammarSeconds": 0,
+          "decodeTokens": 42
+        },
+        {
+          "id": "colloquial-repair",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 8.2665,
+          "codes": "H131 + Z176 + E412",
+          "criticalMinutes": null,
+          "grammarSeconds": 0,
+          "decodeTokens": 73
+        },
+        {
+          "id": "shock-estimate",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "estimated": true
+          },
+          "seconds": 10.86469999998808,
+          "codes": "G521 + H114",
+          "criticalMinutes": 15,
+          "grammarSeconds": 0.00980000001192093,
+          "decodeTokens": 134
+        },
+        {
+          "id": "interrupted-resus",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "minutes": true
+          },
+          "seconds": 8.272600000023841,
+          "codes": "G521 + G523 + G522",
+          "criticalMinutes": 45,
+          "grammarSeconds": 0.01030000001192093,
+          "decodeTokens": 97
+        },
+        {
+          "id": "respiratory",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "minutes": true
+          },
+          "seconds": 9.439200000017882,
+          "codes": "G521 + G523 + G522 + H112",
+          "criticalMinutes": 33,
+          "grammarSeconds": 0,
+          "decodeTokens": 130
+        },
+        {
+          "id": "negative-procedure",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 8.239700000017882,
+          "codes": "H131",
+          "criticalMinutes": null,
+          "grammarSeconds": 0,
+          "decodeTokens": 69
+        },
+        {
+          "id": "stable-long-stay",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 5.736300000011921,
+          "codes": "H133",
+          "criticalMinutes": null,
+          "grammarSeconds": 0.011299999982118607,
+          "decodeTokens": 43
+        },
+        {
+          "id": "reassessment",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "reassessment": true
+          },
+          "seconds": 10.1385,
+          "codes": "H103 + H104",
+          "criticalMinutes": null,
+          "grammarSeconds": 0.00009999999403953553,
+          "decodeTokens": 150
+        },
+        {
+          "id": "pressor-shorthand",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true,
+            "minutes": true,
+            "estimated": true
+          },
+          "seconds": 9.1895,
+          "codes": "G521 + G523 + H114",
+          "criticalMinutes": 20,
+          "grammarSeconds": 0.00010000002384185791,
+          "decodeTokens": 128
+        },
+        {
+          "id": "waiting-for-ride",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 5.67059999999404,
+          "codes": "H133",
+          "criticalMinutes": null,
+          "grammarSeconds": 0,
+          "decodeTokens": 43
+        },
+        {
+          "id": "face-repair",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 8.137,
+          "codes": "H131 + Z154 + E412",
+          "criticalMinutes": null,
+          "grammarSeconds": 0,
+          "decodeTokens": 71
+        },
+        {
+          "id": "sedation-role",
+          "pass": true,
+          "checks": {
+            "structure": true,
+            "tier": true,
+            "services": true,
+            "noUnsupportedProcedure": true
+          },
+          "seconds": 13.00819999998808,
+          "codes": "",
+          "criticalMinutes": null,
+          "grammarSeconds": 0.00919999998807907,
+          "decodeTokens": 73
+        }
+      ]
+    }
+  ]
+}

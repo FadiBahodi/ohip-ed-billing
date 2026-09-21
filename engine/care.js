@@ -39,10 +39,80 @@
       );
     return out;
   }
+  function careHint(note) {
+    const marker =
+      /\b(?:G(?:395|391|521|523|522)|critical\s+care|(?:critical\s+)?G[ -]?code|resus(?:citation)?\s+(?:care|time))\b/i;
+    const parts = note.split(/(?<=[.!?])\s+|\n+/);
+    const explicit = parts.find(
+      (s) =>
+        marker.test(s) &&
+        !/\b(?:no|without|not|never|previous|prior|declined)\b.{0,40}(?:critical|G[ -]?code|G(?:395|391|521|523|522)|resus)/i.test(
+          s,
+        ),
+    );
+    if (explicit) {
+      const after = explicit.slice(explicit.search(marker));
+      const duration =
+        after.match(/\b(\d{1,3})\s*(?:min(?:ute)?s?)\b/i) ||
+        explicit.match(
+          /\b(\d{1,3})\s*(?:min(?:ute)?s?)\b.{0,35}(?:critical|G[ -]?code|G(?:395|391|521|523|522)|resus)/i,
+        );
+      return {
+        explicit: true,
+        quote: explicit,
+        minutes: duration ? Math.min(720, +duration[1]) : 0,
+        tier: /\bG(?:521|523|522)\b|life.threatening/i.test(explicit)
+          ? "life"
+          : "other",
+        reason: "Critical-care pathway from your note.",
+      };
+    }
+    if (/\b(?:no|without)\s+(?:resuscitation|critical\s+care)\b/i.test(note))
+      return null;
+    const fluids =
+      /\b(?:gave|given|started|administered|received|bolus(?:ed|es)?|resuscitat\w*)\b.{0,35}\b(?:fluids?|saline|ringer|LR|NS)\b|\b(?:fluid|saline|crystalloid)\s+(?:bolus|resuscitation)/i.test(
+        note,
+      );
+    const reassessed =
+      /r\s*\/\s*a\s*x?\s*[2-9]|reassess\w*|recheck\w*|serial|repeat.{0,20}(?:exam|assessment|perfusion)/i.test(
+        note,
+      );
+    const physiology = [
+      ...note.matchAll(
+        /\btachy(?:cardi\w*)?\b|hypotens\w*|hypovolemi\w*|severe\s+dehydration/gi,
+      ),
+    ].some(
+      (m) =>
+        !/\b(?:no|not|without)\s*$/.test(
+          note.slice(Math.max(0, m.index - 16), m.index),
+        ),
+    );
+    if (fluids && reassessed && physiology)
+      return {
+        explicit: false,
+        quote: note,
+        minutes: 15,
+        tier: "other",
+        reason:
+          "Fluid resuscitation and repeat assessment · proposed other critical care.",
+      };
+    return null;
+  }
   function normalizedEpisode(e, note, date, cursor) {
     let start = minutes(e.start),
       end = minutes(e.end),
       estimated = e.timing !== "documented";
+    // Resolve a malformed model bound from one unambiguous recorded range.
+    // Its duration and one bound must agree; the note supplies the correction.
+    if (start === end && e.minutes > 0) {
+      const matches = T.ranges(note, date, { assume24: true }).items.filter(
+        (r) => r.start === e.start && r.minutes === e.minutes,
+      );
+      if (matches.length === 1) {
+        e = { ...e, end: matches[0].end };
+        end = minutes(e.end);
+      }
+    }
     const recordedRange = T.ranges(note, date, { assume24: true }).items.find(
       (r) => r.start === e.start && r.end === e.end,
     );
@@ -107,6 +177,14 @@
   function reconstruct(f, interpretation, ctx = {}, note = "") {
     const manual = ctx.overrides || {},
       semantic = interpretation?.care;
+    const hint = careHint(note);
+    const stated = [...note.matchAll(
+      /\b(?:spent\s+)?(\d{1,3})\s+minutes?\s+(?:of\s+)?(?:active(?:ly)?\s+(?:care|manag\w*|resuscitat\w*|titrat\w*)|(?:critical|resuscitative)\s+care)/gi,
+    )];
+    const statedDuration =
+      stated.length === 1 && +stated[0][1] > 0
+        ? { minutes: +stated[0][1], quote: stated[0][0] }
+        : null;
     if (
       manual.criticalTier === "none" ||
       manual.exclusive === false ||
@@ -116,8 +194,15 @@
       return null;
     const tier =
       manual.criticalTier ||
+      (hint?.explicit &&
+        (/\bG(?:395|391)\b/i.test(hint.quote)
+          ? "other"
+          : f.critical.tier === "life" || semantic?.tier === "life"
+            ? "life"
+            : hint.tier)) ||
       (semantic?.tier !== "none" && semantic?.tier) ||
-      (["life", "other"].includes(f.critical.tier) ? f.critical.tier : null);
+      (["life", "other"].includes(f.critical.tier) ? f.critical.tier : null) ||
+      hint?.tier;
     if (!["life", "other"].includes(tier)) return null;
     let episodes = [],
       cursor = minutes(f.time) ?? 0;
@@ -126,7 +211,7 @@
         .map((e) => ({
           ...e,
           quote: e.quote || "",
-          timing: "confirmed",
+          timing: ctx.careConfirmed ? "confirmed" : e.timing || "estimated",
           a: minutes(e.start),
           b: minutes(e.end),
         }))
@@ -151,7 +236,35 @@
           if (x) episodes.push(x);
         }
     } else {
-      for (const e of semantic?.episodes || []) {
+      const duration = hint?.explicit && hint.minutes ? hint : statedDuration;
+      const proposed = duration
+        ? [
+            {
+              label: "Care duration from note · proposed clock times",
+              quote: duration.quote,
+              kind: "care",
+              start: "",
+              end: "",
+              minutes: duration.minutes,
+              timing: "estimated",
+            },
+          ]
+        : semantic?.episodes?.length
+          ? semantic.episodes
+          : hint
+            ? [
+                {
+                  label: hint.reason,
+                  quote: hint.quote,
+                  kind: "care",
+                  start: "",
+                  end: "",
+                  minutes: hint.minutes || 15,
+                  timing: "estimated",
+                },
+              ]
+            : [];
+      for (const e of proposed) {
         const x = normalizedEpisode(e, note, f.date, cursor);
         if (x) {
           episodes.push(x);
@@ -159,10 +272,34 @@
         }
       }
     }
+    if (
+      !episodes.some((e) => e.kind === "care") &&
+      (hint || ["life", "other"].includes(semantic?.tier))
+    ) {
+      const fallback = normalizedEpisode(
+        {
+          label:
+            hint?.reason ||
+            "15-minute starting estimate · adjust to your active care",
+          quote: hint?.quote || semantic.quote,
+          kind: "care",
+          start: "",
+          end: "",
+          minutes: hint?.minutes || 15,
+          timing: "estimated",
+        },
+        note,
+        f.date,
+        cursor,
+      );
+      if (fallback) episodes.push(fallback);
+    }
     if (!episodes.some((e) => e.kind === "care"))
       return {
         tier,
-        reason: semantic?.reason || f.critical.reason,
+        reason: hint?.explicit
+          ? hint.reason
+          : semantic?.reason || f.critical.reason,
         episodes: [],
         intervals: [],
         minutes: 0,
@@ -201,7 +338,11 @@
       union(active).reduce((n, r) => n + r.end - r.start, 0) - total;
     return {
       tier,
-      reason: semantic?.reason || f.critical.reason,
+      reason: hint?.explicit
+        ? hint.reason
+        : (semantic?.tier !== "none" && semantic?.reason) ||
+          hint?.reason ||
+          f.critical.reason,
       episodes,
       intervals,
       minutes: total,
@@ -209,6 +350,9 @@
       basis,
       exclusiveProposed: !confirmed && !f.critical.exclusive,
       confirmed,
+      durationFromNote:
+        !ctx.careEpisodes &&
+        !!((hint?.explicit && hint.minutes) || statedDuration),
       needsTiming: !total,
     };
   }
@@ -283,5 +427,14 @@
       );
     return lines.join("\n");
   }
-  return { minutes, time, union, subtract, reconstruct, apply, documentation };
+  return {
+    minutes,
+    time,
+    union,
+    subtract,
+    reconstruct,
+    apply,
+    documentation,
+    careHint,
+  };
 });

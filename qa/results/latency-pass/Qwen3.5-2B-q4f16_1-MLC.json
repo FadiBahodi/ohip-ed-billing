@@ -1,0 +1,1128 @@
+{
+  "model": "Qwen3.5-2B-q4f16_1-MLC",
+  "finished": true,
+  "coldWallMs": 93788.30000001192,
+  "results": [
+    {
+      "fixture": "tachy-g-code",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "minutes": true,
+        "services": true,
+        "actor": true,
+        "estimate": true
+      },
+      "errors": [],
+      "elapsed": 5544.5999999940395,
+      "wallMs": 7160.300000011921,
+      "interpretation": {
+        "assessment": {
+          "level": "multisystem",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "29 year old female, nausea vomiting headache. i gave her fluids because tachy. critical G code 25 minute r/a x2."
+        },
+        "care": {
+          "tier": "other",
+          "reason": "Fluid resuscitation and response checks",
+          "quote": "29 year old female, nausea vomiting headache. i gave her fluids because tachy. critical G code 25 minute r/a x2.",
+          "episodes": [
+            {
+              "label": "Fluid resuscitation and response checks",
+              "quote": "29 year old female, nausea vomiting headache.",
+              "start": "",
+              "end": "",
+              "minutes": 15,
+              "kind": "care",
+              "timing": "estimated"
+            }
+          ]
+        },
+        "services": [],
+        "reassessments": [
+          {
+            "time": "",
+            "quote": "critical G code 25 minute r/a x2.",
+            "reason": "Repeat assessment with further care.",
+            "newCare": true,
+            "dispositionOnly": false
+          }
+        ],
+        "work": [
+          {
+            "label": "Fluid resuscitation and response checks",
+            "quote": "29 year old female, nausea vomiting headache.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 80,
+        "prompt_tokens": 1058,
+        "total_tokens": 1138,
+        "extra": {
+          "e2e_latency_s": 5.544,
+          "prefill_tokens_per_s": 301.33864995727714,
+          "decode_tokens_per_s": 39.59611958016432,
+          "time_to_first_token_s": 3.511,
+          "time_per_output_token_s": 0.025255000000074506,
+          "grammar_init_s": 3.4084000000059604,
+          "grammar_per_token_s": 0.00011500000096857548
+        },
+        "firstTokenMs": 3512.4000000059605,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "fluids-reassessment",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true,
+        "estimate": true
+      },
+      "errors": [],
+      "elapsed": 6063.5,
+      "wallMs": 6066,
+      "interpretation": {
+        "assessment": {
+          "level": "multisystem",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "29F vomiting, tachycardic. Gave fluid boluses and reassessed perfusion twice."
+        },
+        "care": {
+          "tier": "other",
+          "reason": "Fluid resuscitation and response checks",
+          "quote": "29F vomiting, tachycardic. Gave fluid boluses and reassessed perfusion twice.",
+          "episodes": [
+            {
+              "label": "Fluid resuscitation and response checks",
+              "quote": "29F vomiting, tachycardic.",
+              "start": "",
+              "end": "",
+              "minutes": 15,
+              "kind": "care",
+              "timing": "estimated"
+            }
+          ]
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Fluid resuscitation and response checks",
+            "quote": "29F vomiting, tachycardic.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 61,
+        "prompt_tokens": 1046,
+        "total_tokens": 1107,
+        "extra": {
+          "e2e_latency_s": 6.064,
+          "prefill_tokens_per_s": 226.63748835483122,
+          "decode_tokens_per_s": 42.358169571732844,
+          "time_to_first_token_s": 4.615299999982119,
+          "time_per_output_token_s": 0.023608196721213764,
+          "grammar_init_s": 3.1073999999761583,
+          "grammar_per_token_s": 9.01639329605415e-05
+        },
+        "firstTokenMs": 4615.5999999940395,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "oral-hydration",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 2460.0999999940395,
+      "wallMs": 2460.699999988079,
+      "interpretation": {
+        "assessment": {
+          "level": "minor",
+          "reason": "Focused assessment.",
+          "quote": "Mild tachycardia after walking, settled with rest. Drinking water, no treatment needed."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "Mild tachycardia after walking, settled with rest. Drinking water, no treatment needed.",
+          "episodes": []
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Mild tachycardia and hydration",
+            "quote": "Mild tachycardia after walking, settled with rest.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 1041,
+        "total_tokens": 1082,
+        "extra": {
+          "e2e_latency_s": 2.46,
+          "prefill_tokens_per_s": 705.2845528455284,
+          "decode_tokens_per_s": 41.862364711561035,
+          "time_to_first_token_s": 1.476,
+          "time_per_output_token_s": 0.023887804878921046,
+          "grammar_init_s": 0,
+          "grammar_per_token_s": 9.268293075445221e-05
+        },
+        "firstTokenMs": 1476.5,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "no-critical-care",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 2358.4000000059605,
+      "wallMs": 2359,
+      "interpretation": {
+        "assessment": {
+          "level": "minor",
+          "reason": "Focused assessment.",
+          "quote": "Headache, fluids and metoclopramide. No critical care. Felt better and discharged."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "Headache, fluids and metoclopramide. No critical care. Felt better and discharged.",
+          "episodes": []
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Headache management and discharge",
+            "quote": "Headache, fluids and metoclopramide.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 39,
+        "prompt_tokens": 1048,
+        "total_tokens": 1087,
+        "extra": {
+          "e2e_latency_s": 2.358,
+          "prefill_tokens_per_s": 707.9167792460014,
+          "decode_tokens_per_s": 44.663307377305884,
+          "time_to_first_token_s": 1.4804000000059605,
+          "time_per_output_token_s": 0.022389743588673763,
+          "grammar_init_s": 0.007199999988079071,
+          "grammar_per_token_s": 9.743589697740017e-05
+        },
+        "firstTokenMs": 1480.5999999940395,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "sparse",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 5565.9000000059605,
+      "wallMs": 5566.5,
+      "interpretation": {
+        "assessment": {
+          "level": "minor",
+          "reason": "Focused assessment.",
+          "quote": "27 year old female, chest pain, 25 minutes."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "27 year old female, chest pain, 25 minutes.",
+          "episodes": []
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Initial assessment and stabilization",
+            "quote": "27 year old female, chest pain, 25 minutes.",
+            "certainty": "inferred"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 38,
+        "prompt_tokens": 1034,
+        "total_tokens": 1072,
+        "extra": {
+          "e2e_latency_s": 5.565,
+          "prefill_tokens_per_s": 219.33732128518406,
+          "decode_tokens_per_s": 44.8695241449939,
+          "time_to_first_token_s": 4.714199999988079,
+          "time_per_output_token_s": 0.022286842106204286,
+          "grammar_init_s": 3.1269000000059606,
+          "grammar_per_token_s": 8.947368750446722e-05
+        },
+        "firstTokenMs": 4714.399999976158,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "colloquial-repair",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 3109.300000011921,
+      "wallMs": 3110.2999999821186,
+      "interpretation": {
+        "assessment": {
+          "level": "minor",
+          "reason": "Focused assessment.",
+          "quote": "I washed out the 3 cm forearm cut and closed it with five nylon stitches under local lidocaine. Good approximation."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "I washed out the 3 cm forearm cut and closed it with five nylon stitches under local lidocaine. Good approximation.",
+          "episodes": []
+        },
+        "services": [
+          {
+            "service": "laceration",
+            "actor": "self",
+            "status": "performed",
+            "quote": "I washed out the 3 cm forearm cut and closed it with five nylon stitches under local lidocaine.",
+            "site": "forearm",
+            "length_cm": 3,
+            "anaesthesia": "local",
+            "purpose": "unknown"
+          }
+        ],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Wound assessment and repair",
+            "quote": "I washed out the 3 cm forearm cut and closed it with five nylon stitches under local lidocaine.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 72,
+        "prompt_tokens": 1048,
+        "total_tokens": 1120,
+        "extra": {
+          "e2e_latency_s": 3.109,
+          "prefill_tokens_per_s": 701.0033444816053,
+          "decode_tokens_per_s": 44.845842418357556,
+          "time_to_first_token_s": 1.495,
+          "time_per_output_token_s": 0.022298611110283258,
+          "grammar_init_s": 0.009,
+          "grammar_per_token_s": 8.194444576899209e-05
+        },
+        "firstTokenMs": 1495.199999988079,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "shock-estimate",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": false,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true,
+        "estimate": true
+      },
+      "errors": [],
+      "elapsed": 9198.40000000596,
+      "wallMs": 9203,
+      "interpretation": {
+        "assessment": {
+          "level": "multisystem",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "BP 72/40 despite fluid boluses, confused and cool. Started norepi, titrated twice while following perfusion and bedside ultrasound. Rechecked after each change. ICU inserted the central line. 90 minutes in the department overall."
+        },
+        "care": {
+          "tier": "other",
+          "reason": "Fluid resuscitation and response checks",
+          "quote": "BP 72/40 despite fluid boluses, confused and cool. Started norepi, titrated twice while following perfusion and bedside ultrasound. Rechecked after each change. ICU inserted the central line. 90 minutes in the department overall.",
+          "episodes": [
+            {
+              "label": "Fluid resuscitation and response checks",
+              "quote": "BP 72/40 despite fluid boluses, confused and cool.",
+              "start": "",
+              "end": "",
+              "minutes": 15,
+              "kind": "care",
+              "timing": "estimated"
+            }
+          ]
+        },
+        "services": [
+          {
+            "service": "nerve_block",
+            "actor": "other",
+            "status": "performed",
+            "quote": "Started norepi, titrated twice while following perfusion and bedside ultrasound.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          },
+          {
+            "service": "nerve_block",
+            "actor": "other",
+            "status": "performed",
+            "quote": "Rechecked after each change.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          },
+          {
+            "service": "nerve_block",
+            "actor": "other",
+            "status": "performed",
+            "quote": "ICU inserted the central line.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          },
+          {
+            "service": "nerve_block",
+            "actor": "other",
+            "status": "performed",
+            "quote": "90 minutes in the department overall.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          }
+        ],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Fluid resuscitation and response checks",
+            "quote": "BP 72/40 despite fluid boluses, confused and cool.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 189,
+        "prompt_tokens": 1088,
+        "total_tokens": 1277,
+        "extra": {
+          "e2e_latency_s": 9.198,
+          "prefill_tokens_per_s": 227.20628158430083,
+          "decode_tokens_per_s": 43.14182017534561,
+          "time_to_first_token_s": 4.788600000023842,
+          "time_per_output_token_s": 0.023179365078608186,
+          "grammar_init_s": 3.1347000000178813,
+          "grammar_per_token_s": 6.984126993588048e-05
+        },
+        "firstTokenMs": 4788.9000000059605,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "interrupted-resus",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": false,
+        "noExtraProcedure": true,
+        "minutes": false,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 7852.9000000059605,
+      "wallMs": 7854.5999999940395,
+      "interpretation": {
+        "assessment": {
+          "level": "multisystem",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "PIA 14:00. Septic shock. I managed norepinephrine and repeated perfusion assessments from 14:00 to 14:40, except 14:12 to 14:22 when I treated another patient. Returned 15:00 to 15:15 for recurrent hypotension, titrated pressor and reassessed response. These were my active care intervals."
+        },
+        "care": {
+          "tier": "other",
+          "reason": "Septic shock management (pressor titration)",
+          "quote": "PIA 14:00. Septic shock. I managed norepinephrine and repeated perfusion assessments from 14:00 to 14:40, except 14:12 to 14:22 when I treated another patient. Returned 15:00 to 15:15 for recurrent hypotension, titrated pressor and reassessed response. These were my active care intervals.",
+          "episodes": [
+            {
+              "label": "Septic shock management (pressor titration)",
+              "quote": "PIA 14:00.",
+              "start": "",
+              "end": "",
+              "minutes": 15,
+              "kind": "care",
+              "timing": "estimated"
+            }
+          ]
+        },
+        "services": [],
+        "reassessments": [
+          {
+            "time": "14:00",
+            "quote": "PIA 14:00.",
+            "reason": "Repeat assessment with further care.",
+            "newCare": true,
+            "dispositionOnly": false
+          },
+          {
+            "time": "14:40",
+            "quote": "I managed norepinephrine and repeated perfusion assessments from 14:00 to 14:40, except 14:12 to 14:22 when I treated another patient.",
+            "reason": "Repeat assessment with further care.",
+            "newCare": true,
+            "dispositionOnly": false
+          },
+          {
+            "time": "15:15",
+            "quote": "Returned 15:00 to 15:15 for recurrent hypotension, titrated pressor and reassessed response.",
+            "reason": "Repeat assessment with further care.",
+            "newCare": true,
+            "dispositionOnly": false
+          }
+        ],
+        "work": [
+          {
+            "label": "Septic shock management (pressor titration)",
+            "quote": "PIA 14:00.",
+            "certainty": "inferred"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 134,
+        "prompt_tokens": 1131,
+        "total_tokens": 1265,
+        "extra": {
+          "e2e_latency_s": 7.853,
+          "prefill_tokens_per_s": 236.32412553746138,
+          "decode_tokens_per_s": 43.93010523494972,
+          "time_to_first_token_s": 4.785800000011921,
+          "time_per_output_token_s": 0.022763432836132254,
+          "grammar_init_s": 3.096699999988079,
+          "grammar_per_token_s": 7.313432866957652e-05
+        },
+        "firstTokenMs": 4786,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "respiratory",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": false,
+        "noExtraProcedure": true,
+        "minutes": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 12027.699999988079,
+      "wallMs": 12036,
+      "interpretation": {
+        "assessment": {
+          "level": "multisystem",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "Acute respiratory failure. I started BiPAP and titrated pressures with repeated airway and breathing checks. Exclusive critical care 00:05\u201300:21; 01:10\u201301:20; 01:40\u201301:47. Nursing placed the IV."
+        },
+        "care": {
+          "tier": "other",
+          "reason": "Acute respiratory failure and critical care",
+          "quote": "Acute respiratory failure. I started BiPAP and titrated pressures with repeated airway and breathing checks. Exclusive critical care 00:05\u201300:21; 01:10\u201301:20; 01:40\u201301:47. Nursing placed the IV.",
+          "episodes": [
+            {
+              "label": "Acute respiratory failure and critical care",
+              "quote": "Acute respiratory failure.",
+              "start": "",
+              "end": "",
+              "minutes": 15,
+              "kind": "care",
+              "timing": "estimated"
+            }
+          ]
+        },
+        "services": [
+          {
+            "service": "central_line",
+            "actor": "other",
+            "status": "performed",
+            "quote": "I started BiPAP and titrated pressures with repeated airway and breathing checks.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          },
+          {
+            "service": "central_line",
+            "actor": "nurse",
+            "status": "performed",
+            "quote": "Nursing placed the IV.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          },
+          {
+            "service": "central_line",
+            "actor": "nurse",
+            "status": "performed",
+            "quote": "Nursing placed the IV.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          },
+          {
+            "service": "central_line",
+            "actor": "nurse",
+            "status": "performed",
+            "quote": "Nursing placed the IV.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          },
+          {
+            "service": "central_line",
+            "actor": "nurse",
+            "status": "performed",
+            "quote": "Nursing placed the IV.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          },
+          {
+            "service": "central_line",
+            "actor": "nurse",
+            "status": "performed",
+            "quote": "Nursing placed the IV.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          },
+          {
+            "service": "central_line",
+            "actor": "nurse",
+            "status": "performed",
+            "quote": "Nursing placed the IV.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          },
+          {
+            "service": "central_line",
+            "actor": "nurse",
+            "status": "performed",
+            "quote": "Nursing placed the IV.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          }
+        ],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Acute respiratory failure and critical care",
+            "quote": "Acute respiratory failure.",
+            "certainty": "inferred"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 308,
+        "prompt_tokens": 1108,
+        "total_tokens": 1416,
+        "extra": {
+          "e2e_latency_s": 12.027,
+          "prefill_tokens_per_s": 231.82341249084635,
+          "decode_tokens_per_s": 42.79025826938336,
+          "time_to_first_token_s": 4.7795,
+          "time_per_output_token_s": 0.023369805195018065,
+          "grammar_init_s": 3.098899999976158,
+          "grammar_per_token_s": 7.207792126513159e-05
+        },
+        "firstTokenMs": 4780,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "negative-procedure",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 5667.4000000059605,
+      "wallMs": 5674.600000023842,
+      "interpretation": {
+        "assessment": {
+          "level": "minor",
+          "reason": "Focused assessment.",
+          "quote": "Small abscess, focused assessment. I offered drainage; patient declined. No procedure performed. No resuscitation. Discharged with follow-up."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "Small abscess, focused assessment. I offered drainage; patient declined. No procedure performed. No resuscitation. Discharged with follow-up.",
+          "episodes": []
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Focused assessment of abscess",
+            "quote": "Small abscess, focused assessment.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 39,
+        "prompt_tokens": 1068,
+        "total_tokens": 1107,
+        "extra": {
+          "e2e_latency_s": 5.667,
+          "prefill_tokens_per_s": 223.6555536932486,
+          "decode_tokens_per_s": 44.047887955499526,
+          "time_to_first_token_s": 4.775200000017882,
+          "time_per_output_token_s": 0.022702564105009412,
+          "grammar_init_s": 3.1399000000059605,
+          "grammar_per_token_s": 9.2307692919022e-05
+        },
+        "firstTokenMs": 4775.9000000059605,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "stable-long-stay",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 2299.7000000178814,
+      "wallMs": 2300.7000000178814,
+      "interpretation": {
+        "assessment": {
+          "level": "multisystem",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "Stable chest pain, ECG and troponins reviewed. No ongoing pain or instability. Waited 4 hours for repeat bloodwork. Discharged. Total encounter 5 hours."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "Stable chest pain, ECG and troponins reviewed. No ongoing pain or instability. Waited 4 hours for repeat bloodwork. Discharged. Total encounter 5 hours.",
+          "episodes": []
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 23,
+        "prompt_tokens": 1072,
+        "total_tokens": 1095,
+        "extra": {
+          "e2e_latency_s": 2.299,
+          "prefill_tokens_per_s": 622.9660622922905,
+          "decode_tokens_per_s": 39.96524760663403,
+          "time_to_first_token_s": 1.720800000011921,
+          "time_per_output_token_s": 0.02502173913302629,
+          "grammar_init_s": 0.023199999988079072,
+          "grammar_per_token_s": 7.82608687877655e-05
+        },
+        "firstTokenMs": 1721.699999988079,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "reassessment",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": false,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true,
+        "opportunity": true
+      },
+      "errors": [],
+      "elapsed": 7557.699999988079,
+      "wallMs": 7559.0999999940395,
+      "interpretation": {
+        "assessment": {
+          "level": "multisystem",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "PIA 09:00 flank pain assessed. At 11:40 I reassessed for persistent severe pain and new vomiting despite initial treatment. Repeat abdominal exam, ordered CT and gave additional IV analgesia. Symptoms improved by 12:10."
+        },
+        "care": {
+          "tier": "other",
+          "reason": "Repeat examination and further treatment",
+          "quote": "PIA 09:00 flank pain assessed. At 11:40 I reassessed for persistent severe pain and new vomiting despite initial treatment. Repeat abdominal exam, ordered CT and gave additional IV analgesia. Symptoms improved by 12:10.",
+          "episodes": [
+            {
+              "label": "Repeat examination and further treatment",
+              "quote": "PIA 09:00 flank pain assessed.",
+              "start": "",
+              "end": "",
+              "minutes": 15,
+              "kind": "care",
+              "timing": "estimated"
+            }
+          ]
+        },
+        "services": [],
+        "reassessments": [
+          {
+            "time": "11:40",
+            "quote": "At 11:40 I reassessed for persistent severe pain and new vomiting despite initial treatment.",
+            "reason": "Repeat assessment with further care.",
+            "newCare": true,
+            "dispositionOnly": false
+          },
+          {
+            "time": "12:10",
+            "quote": "Repeat abdominal exam, ordered CT and gave additional IV analgesia.",
+            "reason": "Repeat assessment with further care.",
+            "newCare": true,
+            "dispositionOnly": false
+          }
+        ],
+        "work": [
+          {
+            "label": "Repeat examination and further treatment",
+            "quote": "PIA 09:00 flank pain assessed.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 107,
+        "prompt_tokens": 1088,
+        "total_tokens": 1195,
+        "extra": {
+          "e2e_latency_s": 7.557,
+          "prefill_tokens_per_s": 215.87729915250566,
+          "decode_tokens_per_s": 42.79657627512243,
+          "time_to_first_token_s": 5.039900000005961,
+          "time_per_output_token_s": 0.02336635513951844,
+          "grammar_init_s": 3.353899999976158,
+          "grammar_per_token_s": 8.411215036828942e-05
+        },
+        "firstTokenMs": 5040.300000011921,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "pressor-shorthand",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": false,
+        "noExtraProcedure": true,
+        "minutes": false,
+        "services": true,
+        "actor": true,
+        "estimate": true
+      },
+      "errors": [],
+      "elapsed": 7063.899999976158,
+      "wallMs": 7064.799999982119,
+      "interpretation": {
+        "assessment": {
+          "level": "multisystem",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "77M febrile, hypotensive, MAP 48 after fluids. Started levophed and adjusted the infusion twice, bedside perfusion checks after each change. I spent 20 minutes actively managing his shock; no start clock recorded."
+        },
+        "care": {
+          "tier": "other",
+          "reason": "Fluid resuscitation and response checks",
+          "quote": "77M febrile, hypotensive, MAP 48 after fluids. Started levophed and adjusted the infusion twice, bedside perfusion checks after each change. I spent 20 minutes actively managing his shock; no start clock recorded.",
+          "episodes": [
+            {
+              "label": "Fluid resuscitation and response checks",
+              "quote": "77M febrile, hypotensive, MAP 48 after fluids.",
+              "start": "",
+              "end": "",
+              "minutes": 15,
+              "kind": "care",
+              "timing": "estimated"
+            }
+          ]
+        },
+        "services": [
+          {
+            "service": "cardioversion",
+            "actor": "other",
+            "status": "performed",
+            "quote": "Started levophed and adjusted the infusion twice, bedside perfusion checks after each change.",
+            "site": "",
+            "length_cm": 0,
+            "anaesthesia": "unknown",
+            "purpose": "unknown"
+          }
+        ],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Fluid resuscitation and response checks",
+            "quote": "77M febrile, hypotensive, MAP 48 after fluids.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 92,
+        "prompt_tokens": 1084,
+        "total_tokens": 1176,
+        "extra": {
+          "e2e_latency_s": 7.063,
+          "prefill_tokens_per_s": 225.7815917188448,
+          "decode_tokens_per_s": 40.87072412098884,
+          "time_to_first_token_s": 4.801099999994039,
+          "time_per_output_token_s": 0.024467391305319643,
+          "grammar_init_s": 3.237300000011921,
+          "grammar_per_token_s": 7.282608747482298e-05
+        },
+        "firstTokenMs": 4801.199999988079,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "waiting-for-ride",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 2568.699999988079,
+      "wallMs": 2569.2999999821186,
+      "interpretation": {
+        "assessment": {
+          "level": "minor",
+          "reason": "Focused assessment.",
+          "quote": "Near-syncope. BP and examination normal throughout. Felt better after drinking water. Waited two hours for a ride home, no further active care."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "Near-syncope. BP and examination normal throughout. Felt better after drinking water. Waited two hours for a ride home, no further active care.",
+          "episodes": []
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Near-syncope and initial assessment",
+            "quote": "Near-syncope.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 41,
+        "prompt_tokens": 1063,
+        "total_tokens": 1104,
+        "extra": {
+          "e2e_latency_s": 2.568,
+          "prefill_tokens_per_s": 683.2058615696952,
+          "decode_tokens_per_s": 40.67863875841533,
+          "time_to_first_token_s": 1.5558999999761582,
+          "time_per_output_token_s": 0.024582926826506122,
+          "grammar_init_s": 9.999999403953553e-05,
+          "grammar_per_token_s": 0.00013658536498139542
+        },
+        "firstTokenMs": 1556.2000000178814,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "face-repair",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 6644.299999982119,
+      "wallMs": 6645.199999988079,
+      "interpretation": {
+        "assessment": {
+          "level": "minor",
+          "reason": "Focused assessment.",
+          "quote": "At 18:10 I infiltrated lidocaine and sewed the 2 cm chin wound with nylon. No other injury. Good approximation."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "At 18:10 I infiltrated lidocaine and sewed the 2 cm chin wound with nylon. No other injury. Good approximation.",
+          "episodes": []
+        },
+        "services": [
+          {
+            "service": "laceration",
+            "actor": "self",
+            "status": "performed",
+            "quote": "At 18:10 I infiltrated lidocaine and sewed the 2 cm chin wound with nylon.",
+            "site": "chin",
+            "length_cm": 2,
+            "anaesthesia": "local",
+            "purpose": "unknown"
+          }
+        ],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Wound assessment and repair",
+            "quote": "At 18:10 I infiltrated lidocaine and sewed the 2 cm chin wound with nylon.",
+            "certainty": "documented"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 71,
+        "prompt_tokens": 1059,
+        "total_tokens": 1130,
+        "extra": {
+          "e2e_latency_s": 6.644,
+          "prefill_tokens_per_s": 214.78551871006997,
+          "decode_tokens_per_s": 41.66177678923923,
+          "time_to_first_token_s": 4.9305,
+          "time_per_output_token_s": 0.0240028168999813,
+          "grammar_init_s": 3.225,
+          "grammar_per_token_s": 0.00010281690325535515
+        },
+        "firstTokenMs": 4930.799999982119,
+        "pipeline": "compact"
+      }
+    },
+    {
+      "fixture": "sedation-role",
+      "model": "Qwen3.5-2B-q4f16_1-MLC",
+      "checks": {
+        "valid": true,
+        "tier": true,
+        "noExtraProcedure": true,
+        "services": true,
+        "actor": true
+      },
+      "errors": [],
+      "elapsed": 5904.199999988079,
+      "wallMs": 5905.0999999940395,
+      "interpretation": {
+        "assessment": {
+          "level": "multisystem",
+          "reason": "Assessment reconstructed from the encounter.",
+          "quote": "I was the sedation physician only. Gave ketamine and monitored procedural sedation from 14:15 to 14:30. Orthopedics reduced the shoulder. No separate assessment by me."
+        },
+        "care": {
+          "tier": "none",
+          "reason": "No resuscitative work identified.",
+          "quote": "I was the sedation physician only. Gave ketamine and monitored procedural sedation from 14:15 to 14:30. Orthopedics reduced the shoulder. No separate assessment by me.",
+          "episodes": []
+        },
+        "services": [],
+        "reassessments": [],
+        "work": [
+          {
+            "label": "Procedural sedation (Ketamine) and monitoring",
+            "quote": "I was the sedation physician only.",
+            "certainty": "inferred"
+          }
+        ],
+        "opportunities": []
+      },
+      "usage": {
+        "completion_tokens": 47,
+        "prompt_tokens": 1076,
+        "total_tokens": 1123,
+        "extra": {
+          "e2e_latency_s": 5.904,
+          "prefill_tokens_per_s": 224.84119023765882,
+          "decode_tokens_per_s": 42.23580157548786,
+          "time_to_first_token_s": 4.78559999999404,
+          "time_per_output_token_s": 0.023676595748104944,
+          "grammar_init_s": 3.2325,
+          "grammar_per_token_s": 0.0001595744668169224
+        },
+        "firstTokenMs": 4785.799999982119,
+        "pipeline": "compact"
+      }
+    }
+  ]
+}

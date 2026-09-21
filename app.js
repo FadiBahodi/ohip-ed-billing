@@ -232,21 +232,30 @@ function initInterpreter() {
           return;
         state.semantic = m.interpretation;
         state.semanticMs = m.elapsed;
+        updateAI({ status: "ready", message: "Local AI ready" });
         build({ requestAI: false });
       };
       const focused = document.activeElement;
-      if (focused?.closest(".question-section") && focused.tagName === "INPUT")
+      if (
+        focused?.closest(".question-section, .care-inline") &&
+        focused.tagName === "INPUT"
+      )
         focused.addEventListener("blur", apply, { once: true });
       else apply();
     },
     onError: (m) => updateAI({ status: "error", message: m.message }),
   });
+  interpreter.warmup(D.services.map((x) => ({ id: x.id, label: x.label })));
 }
 window.addEventListener("folio:interpreter-ready", () => {
   initInterpreter();
   if ($("#note").value.trim()) scheduleSemantic();
 });
+let aiTimer,
+  aiStageStarted = 0;
 function updateAI(update) {
+  if (update.status !== state.ai.status || update.message !== state.ai.message)
+    aiStageStarted = performance.now();
   state.ai = { ...state.ai, ...update };
   const b = $("#ai-status");
   if (!b) return;
@@ -254,18 +263,30 @@ function updateAI(update) {
   b.textContent =
     status === "loading"
       ? Number.isFinite(state.ai.progress)
-        ? "Local AI · " + Math.round(state.ai.progress * 100) + "%"
-        : "Loading local AI…"
+        ? "Preparing local AI · " + Math.round(state.ai.progress * 100) + "%"
+        : "Preparing local AI…"
       : status === "thinking"
         ? state.ai.message || "Reading the encounter…"
         : status === "ready"
-          ? "Local AI ready"
+          ? "Local AI ready" +
+            (state.semanticMs
+              ? " · " + (state.semanticMs / 1000).toFixed(1) + "s"
+              : "")
           : status === "error"
             ? "Local AI needs attention ↗"
             : status === "paused"
               ? "Local AI paused"
               : "Local AI · starts with your note";
   b.dataset.status = status;
+  clearInterval(aiTimer);
+  if (status === "thinking")
+    aiTimer = setInterval(() => {
+      b.textContent =
+        (state.ai.message || "Interpreting work…") +
+        " · " +
+        Math.floor((performance.now() - aiStageStarted) / 1000) +
+        "s";
+    }, 1000);
 }
 function scheduleSemantic() {
   clearTimeout(semanticTimer);
@@ -790,6 +811,33 @@ function editCareTimeline() {
     }),
   );
 }
+function editCareClock(plan, index, field, value) {
+  const current =
+    state.facts?.carePlan?.episodes[index] || plan.episodes[index];
+  if (
+    field === "minutes"
+      ? Number(value) === current.b - current.a
+      : value === current[field]
+  )
+    return;
+  const rows = plan.episodes.map((e) => ({ ...e, timing: "estimated" }));
+  const e = rows[index];
+  if (field === "minutes") {
+    const m = Number(value);
+    if (!Number.isInteger(m) || m < 1 || m > 720)
+      return toast("Use 1–720 active minutes.");
+    e.end = FolioCare.time(FolioCare.minutes(e.start) + m);
+  } else {
+    e[field] = value;
+    if (field === "start" && FolioCare.minutes(value) !== null)
+      e.end = FolioCare.time(FolioCare.minutes(value) + current.b - current.a);
+  }
+  if (rows.some((e) => !e.start || !e.end || e.start === e.end)) return;
+  state.ctx.careEpisodes = rows;
+  state.ctx.careConfirmed = false;
+  state.reviewed = false;
+  build({ requestAI: false });
+}
 function carePanel() {
   const p = state.facts?.carePlan;
   if (!p?.minutes) return null;
@@ -804,7 +852,9 @@ function carePanel() {
         class: "tag " + (p.basis === "estimated" ? "amber" : "blue"),
         text:
           p.basis === "estimated"
-            ? "Estimated timeline"
+            ? p.durationFromNote
+              ? "Proposed clocks"
+              : "Estimated timeline"
             : p.confirmed
               ? "Times confirmed"
               : "Times from note",
@@ -814,17 +864,59 @@ function carePanel() {
     E(
       "div",
       { class: "care-timeline" },
-      p.episodes.map((e) =>
+      p.episodes.map((e, i) =>
         E(
           "div",
           { class: "care-episode " + e.kind },
-          E("span", { class: "care-clock", text: e.start + "–" + e.end }),
-          E("span", { text: e.label }),
+          E(
+            "div",
+            { class: "care-inline" },
+            E(
+              "label",
+              {},
+              "Start",
+              E("input", {
+                type: "time",
+                value: e.start,
+                "aria-label": "Care start " + (i + 1),
+                onchange: (x) => editCareClock(p, i, "start", x.target.value),
+                onblur: (x) => editCareClock(p, i, "start", x.target.value),
+              }),
+            ),
+            E("span", { class: "care-dash", text: "–" }),
+            E(
+              "label",
+              {},
+              "End",
+              E("input", {
+                type: "time",
+                value: e.end,
+                "aria-label": "Care end " + (i + 1),
+                onchange: (x) => editCareClock(p, i, "end", x.target.value),
+                onblur: (x) => editCareClock(p, i, "end", x.target.value),
+              }),
+            ),
+            E(
+              "label",
+              { class: "care-duration" },
+              "Minutes",
+              E("input", {
+                type: "number",
+                min: 1,
+                max: 720,
+                value: e.b - e.a,
+                "aria-label": "Care minutes " + (i + 1),
+                onchange: (x) => editCareClock(p, i, "minutes", x.target.value),
+                onblur: (x) => editCareClock(p, i, "minutes", x.target.value),
+              }),
+            ),
+          ),
+          E("span", { text: p.episodes.length === 1 && state.ctx.careEpisodes ? "Active care" : e.label }),
           E("small", {
             text:
               e.kind === "excluded"
                 ? "Excluded"
-                : e.timing === "estimated"
+                : e.timing === "estimated" && p.basis !== "estimated"
                   ? "Estimated"
                   : "",
           }),
@@ -842,7 +934,9 @@ function carePanel() {
     p.basis === "estimated"
       ? E("p", {
           class: "care-note",
-          text: "Suggested active-care time from the work described. Adjust it to match your care.",
+          text: p.durationFromNote
+            ? "Duration from your note. Adjust the proposed start and end clocks."
+            : "Adjust the proposed minutes and clocks to match your active care.",
         })
       : null,
     E(
@@ -978,7 +1072,16 @@ function render() {
           E("strong", {
             text: isAssessment
               ? labels[f.assessment.level]
-              : c?.label || x.reason || x.code,
+              : {
+                  G395: "Other critical care · first 15 minutes",
+                  G391: "Other critical care · additional 15 minutes",
+                  G521: "Life-threatening critical care · first 15 minutes",
+                  G523: "Life-threatening critical care · second 15 minutes",
+                  G522: "Life-threatening critical care · additional 15 minutes",
+                }[x.code] ||
+                c?.label ||
+                x.reason ||
+                x.code,
           }),
           E("small", {
             text: isAssessment
@@ -1069,6 +1172,14 @@ function render() {
     ...(r.opportunities || []),
   ]
     .filter((o) => !(r.critical && o.pathway?.startsWith("critical_")))
+    .filter(
+      (o) =>
+        !(
+          f?.carePlan?.minutes &&
+          o.pathway === "documentation" &&
+          /\b(?:timing|start|stop|clock|duration)\b/i.test(o.title)
+        ),
+    )
     .filter((o, i, a) => a.findIndex((x) => x.title === o.title) === i);
   if (opportunities.length && !state.savedOnly) {
     const area = E(
@@ -2099,8 +2210,7 @@ $("#ai-status").onclick = () =>
     "On-device interpretation",
     E("p", {
       text:
-        (state.ai.message ||
-          "The model loads automatically with your first note.") +
+        (state.ai.message || "Local AI prepares when you open the app.") +
         (state.semanticMs
           ? " · Last interpretation " +
             (state.semanticMs / 1000).toFixed(1) +
@@ -2108,7 +2218,7 @@ $("#ai-status").onclick = () =>
           : ""),
     }),
     E("p", {
-      text: "Qwen3.5 4B runs in a background worker on your device. The first use downloads its model files; later visits use the browser cache. Your note is never sent to a model provider.",
+      text: "Qwen3.5 4B runs in a background worker on your device. It prepares when you open Folio. The first use downloads model files; later visits load them from this browser’s cache. Safari and other browsers keep separate caches. Interpretation then runs on your device; your note is never sent to a model provider.",
     }),
     E("button", {
       class: "button primary",
@@ -2119,9 +2229,34 @@ $("#ai-status").onclick = () =>
           status: "idle",
           message: "Restarting local AI with cached model files.",
         });
+        interpreter?.warmup(
+          D.services.map((x) => ({ id: x.id, label: x.label })),
+        );
         scheduleSemantic();
         $("#modal").close();
       },
+    }),
+    E("button", {
+      class: "button secondary",
+      text: "Explore additional capture",
+      disabled: !$("#note").value.trim(),
+      onclick: () => {
+        initInterpreter();
+        clearTimeout(semanticTimer);
+        state.requestNote = $("#note").value.trim();
+        state.requestEncounter = state.id;
+        interpreter.analyze(
+          state.requestNote,
+          D.services.map((x) => ({ id: x.id, label: x.label })),
+          A.serviceSeeds(state.requestNote, context(), D),
+          { pipeline: "legacy" },
+        );
+        $("#modal").close();
+      },
+    }),
+    E("p", {
+      class: "muted",
+      text: "The quick pass runs automatically. Additional capture takes longer and checks broader documentation and billing opportunities.",
     }),
     E("button", {
       class: "text-button",

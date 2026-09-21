@@ -29,6 +29,9 @@ test("edited notes discard stale model results; pause releases the worker; retry
       onResult: (m) => results.push(m),
       onError: (m) => errors.push(m),
     });
+    bridge.warmup([{ id: "laceration", label: "Laceration repair" }]);
+    assert.equal(workers[0].messages[0].type, "init");
+    assert.equal(workers[0].messages[0].note, undefined);
     const first = bridge.analyze("old encounter", []);
     bridge.cancel();
     const second = bridge.analyze("new encounter", []);
